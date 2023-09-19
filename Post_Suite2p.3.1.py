@@ -25,6 +25,7 @@ import xml_parser
 import json
 import datetime
 # Loading data
+#I add this to test
 current_date = datetime.date.today()
 current_time = datetime.datetime.now().time()
 # Loading data
@@ -165,6 +166,8 @@ if __name__ == "__main__":
     window.show()
     app.exec_()
 DO_MOTION = window.ui.FaceAnalyze
+Do_pupil = window.ui.PupilAnalyze
+print("DO pupil", Do_pupil)
 print("DO_MOTION", DO_MOTION)
 neuropil_impact_factor = window.ui.neuropil
 F0_method = window.ui.F0
@@ -405,6 +408,19 @@ for u in range(len(dF_MOTION_RUN)):
 
 ########################################
 print("Start of permutation test")
+if Do_pupil == 1:
+    valid_neurons_pupil, out_neurons_pupil = functions.permutation(dF, pupil,"pupil", save_direction202)
+    functions.save_data("valid_neurons_pupil.npy", save_data, valid_neurons_pupil)
+    fig = plt.figure(figsize=(7, 5))
+    labels = ['valid neuron', 'unvalid neuron']
+    sizes = [len(valid_neurons_pupil), len(out_neurons_pupil)]
+    colors = ['aquamarine', 'plum']
+    plt.pie(sizes, labels=[f'{label} ({size})' for label, size in zip(labels, sizes)], colors=colors,
+            autopct='%1.1f%%')
+    plt.title('permutation test result (pupil)')
+    functions.save_fig("validation_Pupil.png", save_direction202, fig)
+else:
+    pass
 valid_neurons_speed, out_neurons_speed = functions.permutation(dF, speed,"speed", save_direction202)
 functions.save_data("valid_neurons_speed.npy",save_data,valid_neurons_speed)
 if DO_MOTION == 1:
@@ -1338,9 +1354,12 @@ if DO_MOTION == 1:
     else:
         with open(save_direction_2, 'w') as file:
             json.dump(lag_results, file)
-    print("End of lag calculation")
+
 else:
     valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme, valid_neurons_speed, save_direction030, dF, speed, "speed")
+    print("End of lag calculation")
+if Do_pupil == 1:
+    pupil_lag, lag_mean_dF_pupil = functions.lag(TIme,valid_neurons_pupil, save_direction030, dF, pupil, "pupil")
 
 #save settings
 
