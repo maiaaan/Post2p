@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import plotly.io as pio
 from PyQt5 import QtCore, QtGui, QtWidgets
-from ui_GUI_first import Ui_MainWindow
+from GUI import Ui_MainWindow
 import plotly.express as px
 from matplotlib.gridspec import GridSpec
 from scipy.ndimage import filters
@@ -17,7 +17,7 @@ from scipy.stats.stats import pearsonr
 from scipy import signal
 from scipy.ndimage import gaussian_filter1d
 from sklearn.decomposition import PCA
-import get_dataRE
+import running
 import glob
 import functions
 import bottleneck as bn
@@ -113,7 +113,7 @@ Fneu_raw, keeped_ROI = functions.detect_cell(cell, Fneu_raw)
 F, _ = functions.detect_cell(cell, F)
 functions.save_data("ROI_order.npy",save_data,keeped_ROI)
 # In[7]:
-movement = get_dataRE.single_getspeed(movement_file[0], np.size(F, 1))
+movement = running.single_getspeed(movement_file[0], np.size(F, 1))
 speed = np.copy(movement['speed'])
 n = (len(F) - 1)
 
@@ -131,7 +131,6 @@ pupil = np.interp(x_inter, xp, fp)
 motion = np.interp(x_inter, xp, fp1 )
 print("data for facemap were interpolated")
 ###############################################################
-
 fig01 = plt.figure(figsize=(7, 2))
 TIM = np.arange(0,len(motion))
 plt.plot(TIM,motion)
@@ -191,11 +190,10 @@ else:
     end_FA = last_F_frame
 ###########################################################
 fs = 30
+# Calculating dF
 F = F - (neuropil_impact_factor * Fneu_raw)
-# calculating F0
 percentile = 10
 F0 = functions.calculate_F0(F, fs, percentile, mode = F0_method, win=60)
-# Calculating dF
 dF = functions.deltaF_calculate(F, F0)
 
 ############################################################
@@ -494,6 +492,7 @@ LMI_A = []
 for i in range(len(dF)):
     LMI_i = (mean_dF_run[i] - mean_dF_rest[i]) / (mean_dF_run[i] + mean_dF_rest[i])
     LMI_A.append(LMI_i)
+functions.HistoPlot(LMI_A,"All_LMI",save_direction_figure)
 functions.save_data("AllCell_T_LMI.npy",save_data,LMI_A)
 ############################
 
@@ -769,7 +768,6 @@ fig = px.histogram(Speed_corr_histo_data, x="Correlation", color="Speed validity
                          hover_data=Speed_corr_histo_data.columns, nbins=15,barmode='relative',  opacity = 0.5, color_discrete_map=color_map )
 fig.update_layout(plot_bgcolor='white')
 fig.update_traces(marker_line_color='white', marker_line_width=2)
-fig.show()
 save_direction_histo = os.path.join(save_direction_figure, "Speed_corr_validity.png")
 
 ###########################

@@ -215,7 +215,7 @@ def HistoPlot(X,xLabel,save_direction1):
     else:
         fig14.savefig(save_direction14)
 
-def lag(t_imaging,valid_neurons, save_direction03, dF, X, label):
+def lag(t_imaging,valid_neurons, save_direction03, dF, X, label, speed_corr):
     length = len(X)
     step = t_imaging[-1] / length
     freq = length / t_imaging[-1]
@@ -223,15 +223,23 @@ def lag(t_imaging,valid_neurons, save_direction03, dF, X, label):
     time_corr = np.arange(l / freq, length / freq, step)
     Time = np.linspace(0, t_imaging[-1], length)
     plot_duration = int(20 / step)
+    corr_interval = 150 #frame
+    sstart = length - corr_interval
+    eend = length + corr_interval
     start = length - plot_duration
     end = length + plot_duration
     all_lag = []
     for i in valid_neurons:
         correlation = correlate(dF[i], X)
         correlation = correlation.tolist()
-        max_lagI = max(correlation)
-        Max_index = correlation.index(max_lagI)
-        lagI = (Max_index - length) / freq
+        interested_zone = correlation[sstart:eend]
+        if speed_corr[i]>0:
+            max_lagI = max(interested_zone)
+            Max_index = interested_zone.index(max_lagI)
+        else:
+            max_lagI = min(interested_zone)
+            Max_index = interested_zone.index(max_lagI)
+        lagI = (Max_index - corr_interval) / freq
         all_lag.append(lagI)
         gs = gridspec.GridSpec(6, 1)
         fig1 = plt.figure(figsize=(14, 7))
@@ -300,6 +308,7 @@ def lag(t_imaging,valid_neurons, save_direction03, dF, X, label):
     ax2.legend(loc='upper right', fontsize='small')
     file_name003 = "all ROIs lag( " + label + " )"
     save_direction003 = os.path.join(save_direction03, file_name003)
+    print(lag_mean)
     isExist = os.path.exists(save_direction003)
     if isExist:
         pass
