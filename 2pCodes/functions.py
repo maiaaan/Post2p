@@ -215,7 +215,7 @@ def HistoPlot(X,xLabel,save_direction1):
     else:
         fig14.savefig(save_direction14)
 
-def lag(t_imaging,valid_neurons, save_direction03, dF, X, label, speed_corr):
+def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     length = len(X)
     step = t_imaging[-1] / length
     freq = length / t_imaging[-1]
@@ -223,29 +223,31 @@ def lag(t_imaging,valid_neurons, save_direction03, dF, X, label, speed_corr):
     time_corr = np.arange(l / freq, length / freq, step)
     Time = np.linspace(0, t_imaging[-1], length)
     plot_duration = int(20 / step)
-    corr_interval = 150 #frame
+    corr_interval = 150  # frame
     sstart = length - corr_interval
     eend = length + corr_interval
     start = length - plot_duration
     end = length + plot_duration
     all_lag = []
+    positive_dF = []
     for i in valid_neurons:
         correlation = correlate(dF[i], X)
         correlation = correlation.tolist()
         interested_zone = correlation[sstart:eend]
-        if speed_corr[i]>0:
+        if speed_corr[i] >= 0:
+            positive_dF.append(dF[i])
             max_lagI = max(interested_zone)
             Max_index = interested_zone.index(max_lagI)
         else:
-            max_lagI = min(interested_zone)
-            Max_index = interested_zone.index(max_lagI)
-        lagI = (Max_index - corr_interval) / freq
+            pass
+
+        lagI = (Max_index - corr_interval-1) / freq
         all_lag.append(lagI)
         gs = gridspec.GridSpec(6, 1)
         fig1 = plt.figure(figsize=(14, 7))
-        ax2 = plt.subplot(gs[0:3, 0])
-        ax1 = plt.subplot(gs[3, 0])
-        ax3 = plt.subplot(gs[4, 0])
+        ax2 = plt.subplot(gs[0:4, 0])
+        ax1 = plt.subplot(gs[4, 0])
+        ax3 = plt.subplot(gs[5, 0])
         ax3.plot(Time, X, label=label, color="teal")
         ax3.set_xlabel('Time(s)')
         ax3.set_yticks([])
@@ -272,51 +274,44 @@ def lag(t_imaging,valid_neurons, save_direction03, dF, X, label, speed_corr):
         else:
             plt.savefig(save_direction)
         plt.close(fig1)
+    positive_dF = np.array(positive_dF)
 
-    dF_list = dF.tolist()
-    valid_dF = []
-    for i in valid_neurons:
-        valid_dF.append(dF_list[i])
-    valid_dF = np.array(valid_dF)
+    ######################################################
+    mean_posetive_dF = np.mean(positive_dF, 0)
+    positive_correlation_mean = correlate(mean_posetive_dF, X)
+    positive_correlation_mean = positive_correlation_mean.tolist()
+    positive_interested_zone = positive_correlation_mean[sstart:eend]
+    max_mean_lag_pos = max(positive_interested_zone)
+    max_index_mean_pos = positive_interested_zone.index(max_mean_lag_pos)
+    lag_mean_pos = (max_index_mean_pos - corr_interval-1) / freq
 
-    Mean_dF_corr = np.mean(valid_dF, 0)
-    correlation_mean = correlate(Mean_dF_corr, X)
-    correlation_mean = correlation_mean.tolist()
-    max_mean_lag = max(correlation_mean)
-    Max_index_mean = correlation_mean.index(max_mean_lag)
-    lag_mean = (Max_index_mean - length) / freq
 
-    fig = plt.figure(figsize=(9, 7))
+    fig = plt.figure(figsize=(11, 11))
     gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
     ax = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1])
-
     ax.hist(all_lag, weights=(np.ones(len(all_lag)) / len(all_lag)) * 100, bins=25, alpha=0.5, label='all ROIs lag')
     median = np.median(all_lag)
-    ax.axvline(median, color= "teal", linestyle='dashed', linewidth=1.5, label='median')
+    ax.axvline(median, color="teal", linestyle='dashed', linewidth=1.5, label='median')
     ax.set_xlabel('lag for mean dF all ROIs')
     ax.set_ylabel('Percentage')
     ax.set_title("dF- " + label + " lag")
     ax.legend()
-    ax2.plot(time_corr[start:end], correlation_mean[start:end], alpha=0.7, label='mean dF lag')
-    ax2.axvline(0, color='red', linestyle='dashed', linewidth=1.5, label='zero')
+    ax2.plot(time_corr[start:end], positive_correlation_mean[start:end], alpha=0.7, label='mean dF lag')
+    ax2.axvline(lag_mean_pos, color='red', linestyle='dashed', linewidth=1.5, label='mean lag')
     ax2.set_yticks([])
-    ax.set_xlabel('TIME(s)')
+
     ax2.margins(x=0)
-    ax2.annotate(f'mean lag (s) =  {lag_mean:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
+    ax2.annotate(f'mean dF correlation (s) =  {lag_mean_pos:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
                  ha='left')
     ax2.legend(loc='upper right', fontsize='small')
+    ax2.set_ylabel('correlation')
+
     file_name003 = "all ROIs lag( " + label + " )"
     save_direction003 = os.path.join(save_direction03, file_name003)
-    print(lag_mean)
-    isExist = os.path.exists(save_direction003)
-    if isExist:
-        pass
-    else:
-        plt.savefig(save_direction003)
+    plt.savefig(save_direction003)
     plt.close(fig)
-
-    return all_lag, lag_mean
+    return all_lag, lag_mean_pos
 #Permutation
 
 def permutation(dF, speed,label, save_direction202,sampels = 1000):
