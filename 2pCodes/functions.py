@@ -392,8 +392,10 @@ def calculate_F0(F, fs, percentile, mode = 'hamming', win = 60, sig = 60):
         F0 = filters.maximum_filter1d(F0, win * fs, mode='wrap')
     return F0
 
-def find_intervals(id_below_thr_speed, interval):
-    speed_window =[]
+def find_intervals(id_below_thr_speed, interval, RealTime):
+    Real_TIME_W = []
+    motion_window = []
+    motion_index =[]
     window = []
     for i in range(len(id_below_thr_speed)):
         if (id_below_thr_speed[i] + 1) in id_below_thr_speed:
@@ -401,13 +403,46 @@ def find_intervals(id_below_thr_speed, interval):
         elif (id_below_thr_speed[i] - 1) in id_below_thr_speed:
             window.append(id_below_thr_speed[i])
             if len(window)>interval:
-                speed_window.append(window)
+                motion_index.append(window)
                 window = []
             else:
                 window = []
         else:
             pass
-    return speed_window
+    for i in motion_index:
+        rael_time_W = []
+        S_E = []
+        S_E.append(i[0])
+        S_E.append(i[-1])
+        rael_time_W.append(RealTime[i[0]])
+        rael_time_W.append(RealTime[i[-1]])
+        motion_window.append(S_E)
+        Real_TIME_W.append(rael_time_W)
+    return motion_index, motion_window, Real_TIME_W
+
+def quiescence_interval(motion_window, ids):
+    quiescence_window = []
+    quiescence_index = []
+    for i in range(len(motion_window)-1):
+        Q_window_i = []
+        if i == 0:
+            A = ids[0]
+            E = motion_window[i][0]
+
+        elif i == len(motion_window):
+            A = motion_window[i][-1]
+            E = ids[-1]
+        else:
+            A = motion_window[i][-1]
+            E = motion_window[i+1][0]
+        interval = E - A
+        if interval >150:
+            Q_window_i.append(A+45)
+            Q_window_i.append(E-45)
+            Q_index_i = np.arange(A+45, E-44)
+            quiescence_index.append(Q_index_i)
+            quiescence_window.append(Q_window_i)
+    return quiescence_window, quiescence_index
 
 def save_data(file_name, save_dir, data):
     save_direction = os.path.join(save_dir, file_name)

@@ -1,18 +1,14 @@
 import numpy as np
 import pandas as pd
-import plotly.io as pio
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from GUI import Ui_MainWindow
 import plotly.express as px
-from matplotlib.gridspec import GridSpec
-from scipy.ndimage import filters
 import copy
 import matplotlib.pyplot as plt
 import os.path
 import easygui
 import random
-from functools import reduce
-from operator import concat
+import itertools
 from scipy.stats.stats import pearsonr
 from scipy import signal
 from scipy.ndimage import gaussian_filter1d
@@ -25,13 +21,12 @@ import xml_parser
 import json
 import datetime
 # Loading data
-#I add this to test
 current_date = datetime.date.today()
 current_time = datetime.datetime.now().time()
 # Loading data
 Base_path = easygui.diropenbox(title='select folder contaning data')
 print("Base path = ", Base_path)
-file_name1 = "Results_2.3_Sliding.60"
+file_name1 = "Results_2.3_Sliding_check"
 save_direction1 = os.path.join(Base_path, file_name1)
 isExist1 = os.path.exists(save_direction1)
 
@@ -131,6 +126,7 @@ pupil = np.interp(x_inter, xp, fp)
 motion = np.interp(x_inter, xp, fp1 )
 print("data for facemap were interpolated")
 ###############################################################
+
 fig01 = plt.figure(figsize=(7, 2))
 TIM = np.arange(0,len(motion))
 plt.plot(TIM,motion)
@@ -190,13 +186,27 @@ else:
     end_FA = last_F_frame
 ###########################################################
 fs = 30
-# Calculating dF
 F = F - (neuropil_impact_factor * Fneu_raw)
+# calculating F0
 percentile = 10
 F0 = functions.calculate_F0(F, fs, percentile, mode = F0_method, win=60)
+# Calculating dF
 dF = functions.deltaF_calculate(F, F0)
-
+print(len(dF))
 ############################################################
+# n_cells_raw = len(dF)
+# cells_removed = []
+# for i, v in enumerate(F0):
+#     if v <= 1.5 * Fneu_raw[i]:
+#         cells_removed.append(i)
+# np.delete(F0, cells_removed, 0)
+# np.delete(dF, cells_removed, 0)
+# np.delete(F, cells_removed, 0)
+# np.delete(Fneu_raw, cells_removed, 0)
+# np.delete(cell, cells_removed, 0)
+# print(len(dF))
+# print('-- Removed %s cells out of %s due to low fluorescence' % (len(cells_removed), n_cells_raw))
+##########################################################
 r = np.arange(0, len(pupil))
 if remove_blink == 0:
     ALL_ID = np.arange(0, len(pupil))
@@ -288,101 +298,47 @@ functions.save_data("pupil.npy",save_data,pupil)
 functions.save_data("F.npy",save_data,F)
 functions.save_data("F0.npy",save_data,F0)
 functions.save_data("dF.npy",save_data,dF)
-# In[16]:
-filtered_speed = gaussian_filter1d(speed, 15)  # check standard deviation for Gaussian kernel
+
 # sampling rate
 Fs = 30
 second = len(motion) // Fs
 tstep = 1 / Fs
 N = len(dF[0])
 Step = second / len(dF[0])
-time = (np.arange(0, second, Step, dtype=float))
+###################
+Time = np.arange(0, len(motion))
+filtered_motion = gaussian_filter1d(motion, 15)
+ids = np.arange(0, len(filtered_motion))
+motion_threshold = 2*(np.std(motion))
+#Extracting Indexes and intervals for WMI
+id_above_thr_motion = np.extract(filtered_motion >= motion_threshold, ids)
+motion_index, motion_window, Real_time_m_window = functions.find_intervals(id_above_thr_motion, 2, TIme) #to extract quiescence index use function with a small interval
+motion_index2, motion_window2, Real_time_m_window2 = functions.find_intervals(id_above_thr_motion, 30, TIme) #to extract motion index use the function with bigger interval.
+#motion_window2: it only select motion windows that at least is one Secon
+quiescence_window, quiescence_index = functions.quiescence_interval(motion_window, ids)
+motion_index2 = list(itertools.chain(*motion_index2))
+quiescence_index= list(itertools.chain(*quiescence_index))
 
 
-ids = np.arange(0,len(filtered_speed))
-interval = 59
-id_below_thr_speed = np.extract(filtered_speed >= 0.5 , ids)
-speed_window = functions.find_intervals(id_below_thr_speed, interval)
-if len(speed_window) == 0:
-  raise Exception("Analyse can't be complet!! In this session mouse didn't run enough")
-WIN = []
-for i in range(len(speed_window)):
-    S = []
-    S.append(TIme[speed_window[i][0]])
-    S.append(TIme[speed_window[i][-1]])
-    WIN.append(S)
-Motion_window = copy.deepcopy(speed_window)
-WIN_MO = []
-for i in range(len(Motion_window)):
-    S_M = []
-    if (((Motion_window[i][0]) - 30) > ids[0]) and (((Motion_window[i][-1]) + 30) < ids[-1]):
-        Motion_window[i][0] = (Motion_window[i][0]) - 30
-        Motion_window[i][-1] = (Motion_window[i][-1]) + 30
-    elif (((Motion_window[i][0]) - 30) < ids[0]) and (((Motion_window[i][-1]) + 30) < ids[-1]):
-        Motion_window[i][0] = ids[0]
-        Motion_window[i][-1] = (Motion_window[i][-1]) + 30
-    elif (((Motion_window[i][0]) - 30) > ids[0]) and (((Motion_window[i][-1]) + 30) > ids[-1]):
-        Motion_window[i][0] = (Motion_window[i][0]) - 30
-        Motion_window[i][-1] = ids[-1]
-    S_M.append(TIme[Motion_window[i][0]])
-    S_M.append(TIme[Motion_window[i][-1]])
-    WIN_MO.append(S_M)
+################
+filtered_speed = gaussian_filter1d(speed, 15)
+speed_threshold = 0.5
+#Extracting Indexes and intervals for LMI
+id_above_thr_speed = np.extract(filtered_speed >= speed_threshold, ids)
+speed_index, speed_window, Real_Time_S_window = functions.find_intervals(id_above_thr_speed, 2, TIme) # to extract quiescence index use function with a small interval
+speed_index2, speed_window2, Real_Time_S_window2 = functions.find_intervals(id_above_thr_speed, 60, TIme) # to extract running index use the function with bigger interval
+quiescence_window_S, quiescence_index_S = functions.quiescence_interval(speed_window, ids)
 
-##############################################################
-motion_ind = reduce(concat, Motion_window)
-motion_ind = list(set(motion_ind))
-
-RUN_ind = reduce(concat, speed_window)
-RUN_ind = list(set(RUN_ind))
-dF_RUN = copy.deepcopy(dF)
-dF_RUN = dF_RUN.tolist()
-
-dF_REST = copy.deepcopy(dF)
-dF_REST = dF_REST.tolist()
-
-whisk_NoRun = copy.deepcopy(motion)
-whisk_NoRun = whisk_NoRun.tolist()
-
-whisk_RUN = copy.deepcopy(motion)
-whisk_RUN = whisk_RUN.tolist()
-
-dF_MOTION_NO_RUN = copy.deepcopy(dF)
-dF_MOTION_NO_RUN = dF_MOTION_NO_RUN.tolist()
-
-dF_MOTION_RUN = copy.deepcopy(dF)
-dF_MOTION_RUN = dF_MOTION_RUN.tolist()
-
-for i in range(len(dF_RUN)):
-    for s in sorted(RUN_ind, reverse=True):
-        del dF_REST[i][s]
-'''dF__RUN=[]        
-for u in range(len(dF)):
-    dF_RUN[u]=[x for x in dF_RUN[u] if x not in dF_REST[u]]
-    dF__RUN.append(dF_RUN[u])'''
-dF__RUN = []
-for u in range(len(dF)):
-    kk = []
-    for b in RUN_ind:
-        kk.append(dF_RUN[u][b])
-    dF__RUN.append(kk)
-
-for s in sorted(motion_ind, reverse=True):
-    del whisk_NoRun[s]
-
-for i in range(len(dF_MOTION_NO_RUN)):
-    for s in sorted(motion_ind, reverse=True):
-        del dF_MOTION_NO_RUN[i][s]
-
-WHISK_run = []
-for i in motion_ind:
-    WHISK_run.append(whisk_RUN[i])
-
-dF_MOTION_RUNN = []
-for u in range(len(dF_MOTION_RUN)):
-    ll = []
-    for e in motion_ind:
-        ll.append(dF_MOTION_RUN[u][e])
-    dF_MOTION_RUNN.append(ll)
+#fCalculating LMI
+speed_index2 = list(itertools.chain(*speed_index2))
+quiescence_index_S= list(itertools.chain(*quiescence_index_S))
+dF_NoMotion_S, dF_Motion_S = functions.dF_faceMotion(speed_index2, quiescence_index_S, dF)
+S_mean_dF_NoMotion = np.mean(dF_NoMotion_S, 1)
+S_mean_dF_Motion = np.mean(dF_Motion_S, 1)
+LMI = []  # Locomotion Modulation Index
+for i in range(len(dF)):
+    LMI_i = (S_mean_dF_Motion[i] - S_mean_dF_NoMotion[i]) / (S_mean_dF_Motion[i] + S_mean_dF_NoMotion[i])
+    LMI.append(LMI_i)
 
 #Permutation
 #DO_MOTION = 1
@@ -472,35 +428,17 @@ ROI2 = random.choice(valid_neurons_speed)
 ROi = str(ROI)
 ROi2 = str(ROI2)
 
-# # Calculating Locomotion Modulation Index(LMI)
-# ## Total Movment LMI
-# CALCUlatin LMI
-# absolut{LMI}
-SpeedThreshold = 0.5
-run, rest, index_run, index_rest = functions.RunRest_calculate(speed, SpeedThreshold)
-dF_rest, dF_run = functions.dF_faceMotion(index_run, index_rest, dF)
-mean_dF_rest = np.mean(dF_rest, 1)
-mean_dF_run = np.mean(dF_run, 1)
-
-LMI = []
-for i in valid_neurons_speed:
-    LMI_i = (mean_dF_run[i] - mean_dF_rest[i]) / (mean_dF_run[i] + mean_dF_rest[i])
-    LMI.append(LMI_i)
-functions.HistoPlot(LMI,"LMI",save_direction_figure)
+functions.HistoPlot(LMI,"All LMI",save_direction_figure)
+functions.save_data("All_LMI.npy",save_data,LMI)
 ############################
-LMI_A = []
-for i in range(len(dF)):
-    LMI_i = (mean_dF_run[i] - mean_dF_rest[i]) / (mean_dF_run[i] + mean_dF_rest[i])
-    LMI_A.append(LMI_i)
-functions.HistoPlot(LMI_A,"All_LMI",save_direction_figure)
-functions.save_data("AllCell_T_LMI.npy",save_data,LMI_A)
-############################
-
+S_mean_dF_NoMotion = np.mean(dF_NoMotion_S, 1)
+S_mean_dF_Motion = np.mean(dF_Motion_S, 1)
+#here
 fig122 = plt.figure(figsize=(14, 7))
 plt.title(label='dF Run & dF Rest(LMI)', y=1.05, fontsize=30)
-NUM1 = np.arange(0, len(mean_dF_rest))
+NUM1 = np.arange(0, len(S_mean_dF_NoMotion))
 colors = np.where(np.in1d(NUM1, out_neurons_speed), 'red', 'lightgreen')
-plt.scatter(mean_dF_rest, mean_dF_run, s=100, c = colors)
+plt.scatter(S_mean_dF_NoMotion, S_mean_dF_Motion, s=100, c = colors)
 plt.xticks(fontsize=15)
 plt.yticks(fontsize=15)
 plt.ylabel('mean dF run', fontsize=19, labelpad=10)
@@ -509,33 +447,17 @@ functions.save_fig("dF_RUN_REST_LMI.png", save_direction_figure, fig122)
 
 
 #save
-functions.save_data("LMI_total.npy",save_data,LMI)
-functions.save_data("All_mean_dF_rest_Total_LMI.npy",save_data,mean_dF_rest)
-functions.save_data("All_mean_dF_run_Total_LMI.npy",save_data,mean_dF_run)
+functions.save_data("All_mean_dF_rest_LMI.npy",save_data,S_mean_dF_NoMotion)
+functions.save_data("All_mean_dF_run_LMI.npy",save_data,S_mean_dF_Motion)
 # CALCUlatin Runing LMI
-mean_dF_REST = functions.mean_fluo(dF_REST)
-mean_dF_RUN = functions.mean_fluo(dF__RUN)
+
 #############################
+#double_check
 Total_Time =  len(TIme) / fs
-RUN_TIME = len(dF__RUN[0]) / fs
-REST_TIME = len(dF_REST[0]) / fs
+RUN_TIME = len(dF_Motion_S[0]) / fs
+REST_TIME = len(dF_NoMotion_S[0]) / fs
 Run_percentage = (RUN_TIME/Total_Time) * 100
 #############################
-LMI_P = []
-for i in valid_neurons_speed:
-    LMI_I = (mean_dF_RUN[i] - mean_dF_REST[i]) / (mean_dF_RUN[i] + mean_dF_REST[i])
-    LMI_P.append(LMI_I)
-#############################
-A_LMI_P = []
-for i in range(len(dF)):
-    LMI_I = (mean_dF_RUN[i] - mean_dF_REST[i]) / (mean_dF_RUN[i] + mean_dF_REST[i])
-    A_LMI_P.append(LMI_I)
-functions.save_data("AllCell_P_LMI.npy",save_data,A_LMI_P)
-#############################
-functions.save_data("LMI_Run.npy",save_data,LMI_P)
-functions.save_data("All_Cell_mean_dF_rest_Runing_LMI.npy",save_data,mean_dF_REST)
-functions.save_data("All_Cell_mean_dF_run_Runing_LMI.npy",save_data,mean_dF_RUN)
-# In[22]:
 
 filtered_speed = gaussian_filter1d(speed, 15)  # check standard deviation for Gaussian kernel
 max_val = max(filtered_speed)
@@ -548,51 +470,44 @@ plt.ylabel('Speed(cm/s)', labelpad=10)
 plt.xlabel('Time(S)', labelpad=10)
 ax.set_facecolor("white")
 ax.axhline(threshold, color='orange', lw=2)
-for i in range(len(WIN)):
-    start = WIN[i][0]
-    end = WIN[i][1]
-    handle = plt.fill_betweenx(y, start, end, color='lightpink', alpha=.5, label='runing>2(S)')
+for i in Real_Time_S_window2:
+    handle = plt.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing>2(S)')
 functions.save_fig("filtered_speed.png", save_direction_figure, fig25)
-# sort_LMI=sorted(LMI_P)
-fig10 = plt.figure(figsize=(14, 7))
-num = np.arange(0, len(LMI_P))
-#colors = np.where(np.in1d(num, out_neurons_speed), 'red', 'lightgreen')
-plt.title(label='Runing LMI', y=1.05, fontsize=30)
-plt.scatter(num, LMI_P, s=100, color = 'gray')
-plt.xticks(fontsize=15)
-plt.yticks(fontsize=15)
-plt.ylabel('LMI', fontsize=19, labelpad=10)
-plt.xlabel('Neuron ', fontsize=19, labelpad=10)
-functions.save_fig("Running_LMI.png", save_direction_figure, fig10)
-functions.HistoPlot(LMI_P,"Runing LMI",save_direction_figure)
-# # Calculating Whisking Modulation Index (WMI)
 
 # ## Total Movment WMI
 if DO_MOTION ==1:
 
-    threshold_motion = 2 * np.std(motion)
-    whisk_motion, whisk_No_motion, index_motion, index_nomotion = functions.faceMotion_calculate(motion, threshold_motion)
-    dF_NoMotion, dF_Motion = functions.dF_faceMotion(index_motion, index_nomotion, dF)
+    # calculating general WMI
+    dF_NoMotion, dF_Motion = functions.dF_faceMotion(motion_index2, quiescence_index, dF)
     mean_dF_NoMotion = np.mean(dF_NoMotion, 1)
     mean_dF_Motion = np.mean(dF_Motion, 1)
-    #################################
-    WMI = []  # whisking Modulation Index
-    for i in valid_neurons_face:
-        WMI_i = (mean_dF_Motion[i] - mean_dF_NoMotion[i]) / (mean_dF_Motion[i] + mean_dF_NoMotion[i])
-        WMI.append(WMI_i)
-    functions.save_data("WMI.npy",save_data,WMI)
-    ################################
-    #AD
-    Total_Time = len(TIme) / fs
-    Whisking_TIME = len(dF_Motion[0]) / fs
-    NOWhisking_TIME = len(dF_NoMotion[0]) / fs
-    Whisking_percentage = (Whisking_TIME / Total_Time)*100
-    ################################
     A_WMI = []  # whisking Modulation Index
     for i in range(len(dF)):
         WMI_i = (mean_dF_Motion[i] - mean_dF_NoMotion[i]) / (mean_dF_Motion[i] + mean_dF_NoMotion[i])
         A_WMI.append(WMI_i)
-    functions.save_data("AllCell_WMI.npy",save_data,A_WMI)
+    # extracting indexes and intervals for only whisking WMI(whisking when mouse is not running)
+    quiescence_window2, quiescence_index2 = functions.quiescence_interval(speed_window2, ids)
+    quiescence_index2 = list(itertools.chain(*quiescence_index2))
+    only_whisking_index = []
+    for i in motion_index2:
+        if i in quiescence_index2:
+            only_whisking_index.append(i)
+    _, only_whisking_window, real_time_only_whisking_window = functions.find_intervals(only_whisking_index, 3, TIme)
+    # calculate WMI for only whisking periods
+    _, dF_only_whisking = functions.dF_faceMotion(only_whisking_index, quiescence_index, dF)
+    # for no whisking dF we will use the same mean resting dF (mean_dF_NoMotion) as general WMI
+    mean_dF_only_whisking = np.mean(dF_only_whisking, 1)
+    only_whisking_WMI = []  # whisking Modulation Index
+    for i in range(len(dF)):
+        WMI_i = (mean_dF_only_whisking[i] - mean_dF_NoMotion[i]) / (mean_dF_only_whisking[i] + mean_dF_NoMotion[i])
+        only_whisking_WMI.append(WMI_i)
+
+    functions.save_data("WMI.npy",save_data,A_WMI)
+    ################################
+    #AD
+    Total_Time = len(TIme) / fs
+    Whisking_TIME = len(dF_Motion[0]) / fs
+    Whisking_percentage = (Whisking_TIME / Total_Time)*100
     ####################################
     fig123 = plt.figure(figsize=(14, 7))
     plt.title(label='dF Whisking & dF No Whisking(WMI)', y=1.05, fontsize=30)
@@ -608,12 +523,11 @@ if DO_MOTION ==1:
     functions.save_data("All_cell_mean_dF_NoMotion_Total_WMI.npy", save_data, mean_dF_NoMotion)
     functions.save_data("All_cell_mean_dF_Motion_Total_WMI.npy", save_data, mean_dF_Motion)
     fig1010 = plt.figure(figsize=(14, 7))
-    num = np.arange(0, len(WMI))
+    num = np.arange(0, len(A_WMI))
     plt.title(label='WMI', y=1.05, fontsize=30)
-    plt.scatter(num, WMI, s=100, color = 'paleturquoise')
+    plt.scatter(num, A_WMI, s=100, color = 'paleturquoise')
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-
     plt.ylabel('WMI', fontsize=19, labelpad=10)
     plt.xlabel('Neuron ', fontsize=19, labelpad=10)
     functions.save_fig("WMI.png", save_direction_figure,fig1010)
@@ -623,11 +537,11 @@ if DO_MOTION ==1:
     plt.ylabel('motion energy', labelpad=10)
     plt.xlabel('Time(S)', labelpad=10)
     ax.set_facecolor("white")
-    ax.axhline(threshold_motion, color='orange', lw=2)
-    ax.fill_between(TIme, 0, 1, where=motion > threshold_motion,
+    ax.axhline(motion_threshold, color='orange', lw=2)
+    ax.fill_between(TIme, 0, 1, where=motion > motion_threshold,
                     color='pink', alpha=0.5, transform=ax.get_xaxis_transform())
     functions.save_fig("Face_motion_for_absolut_WMI.png", save_direction_figure, fig)
-    functions.HistoPlot(WMI,'absolut WMI', save_direction_figure)
+    functions.HistoPlot(A_WMI,'absolut WMI', save_direction_figure)
     # motion energy
 
     fig8 = plt.figure(figsize=(16, 7))
@@ -635,7 +549,7 @@ if DO_MOTION ==1:
     plt.plot(TIme, motion)
     filter_w = gaussian_filter1d(motion, 12)
     plt.plot(TIme, filter_w)
-    plt.axhline(y=threshold_motion, label='median', linewidth=4, color="green", alpha=0.5)
+    plt.axhline(y=motion_threshold, label='median', linewidth=4, color="green", alpha=0.5)
     # plt.plot(time,const1,linewidth=4)
 
     '''plt.plot(time,const2)
@@ -646,10 +560,8 @@ if DO_MOTION ==1:
     Min_Val = min(motion)
     y = np.arange(Min_Val, (MAx_Val + 0.1), 0.1)
 
-    for i in range(len(WIN_MO)):
-        start = WIN_MO[i][0]
-        end = WIN_MO[i][1]
-        handle = plt.fill_betweenx(y, start, end, color='lightpink', alpha=.5, label='runing>2(S) ± 1S')
+    for i in Real_time_m_window2:
+        handle = plt.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing>2(S) ± 1S')
     plt.legend(handles=[handle], loc=2, prop={'size': 14})
 
     plt.xlabel('Time(S)', fontsize=15, labelpad=8)
@@ -657,50 +569,14 @@ if DO_MOTION ==1:
     plt.yticks(fontsize=15)
     plt.margins(x=0.01)
     functions.save_fig("motion_energy3.png", save_direction_figure,fig8)
-    # CALCUlating WMI in the RUN PERIOD
-    whisk_RUN_Motion, whisk_RUN_noMotion, Index_whisk, Index_NOwhisk = functions.faceMotion_calculate(WHISK_run,
-                                                                                                      threshold_motion)
-    dF_RUN_NOMotion, dF_RUN_MOtion = functions.dF_faceMotion(Index_whisk, Index_NOwhisk, dF_MOTION_RUNN)
 
-    mean_dF_RUN_NOMotion = functions.mean_fluo(dF_RUN_NOMotion)
-    mean_dF_RUN_MOtion = functions.mean_fluo(dF_RUN_MOtion)
-    WMI_RUN = []
-    for i in valid_neurons_face:
-        WMI_RUN_i = (mean_dF_RUN_MOtion[i] - mean_dF_RUN_NOMotion[i]) / (mean_dF_RUN_MOtion[i] + mean_dF_RUN_NOMotion[i])
-        WMI_RUN.append(WMI_RUN_i)
-    functions.save_data("RUN_WMI.npy",save_data,WMI_RUN)
-    functions.save_data("mean_dF_NOMotion_RunWMI.npy",save_data,mean_dF_RUN_NOMotion)
-    functions.save_data("mean_dF_MOtion_RunWMI.npy",save_data,mean_dF_RUN_MOtion)
+    functions.save_data("Rest_WMI.npy",save_data,only_whisking_WMI)
 
-    functions.HistoPlot(WMI_RUN,'WMI RUN', save_direction_figure)
-    # In[32]:
+    functions.save_data("mean_dF_NOMotion_only_whiskingWMI.npy",save_data,mean_dF_NoMotion)
+    functions.save_data("mean_dF_Motion_only_whiskingWMI.npy",save_data,mean_dF_only_whisking)
 
-
-    # CALCUlating WMI in the rest PERIOD
-    # whisk_NoRun value for whisking
-    whisk_NO_RUN_Motion, whisk_NO_RUN_noMotion, Index_motion, Index_nomotion = functions.faceMotion_calculate(whisk_NoRun,
-                                                                                                              threshold_motion)
-    dF_NOMotion, dF_MOtion = functions.dF_faceMotion(Index_motion, Index_nomotion, dF_MOTION_NO_RUN)
-
-    mean_dF_NOMotion = functions.mean_fluo(dF_NOMotion)
-    mean_dF_MOtion = functions.mean_fluo(dF_MOtion)
-    WMI_rest = []  # face motion Modulation Index
-    for i in valid_neurons_face:
-        WMI_rest_i = (mean_dF_MOtion[i] - mean_dF_NOMotion[i]) / (mean_dF_MOtion[i] + mean_dF_NOMotion[i])
-        WMI_rest.append(WMI_rest_i)
-    functions.save_data("Rest_WMI.npy",save_data,WMI_rest)
-    #################################
-    A_WMI_rest = []  # face motion Modulation Index
-    for i in range(len(dF)):
-        WMI_rest_i = (mean_dF_MOtion[i] - mean_dF_NOMotion[i]) / (mean_dF_MOtion[i] + mean_dF_NOMotion[i])
-        A_WMI_rest.append(WMI_rest_i)
-    functions.save_data("All_Cell_Rest_WMI.npy",save_data,A_WMI_rest)
-    #################################
-    functions.save_data("mean_dF_NOMotion_RestWMI.npy",save_data,mean_dF_NOMotion)
-    functions.save_data("mean_dF_Motion_RestWMI.npy",save_data,mean_dF_MOtion)
-
-    functions.HistoPlot(WMI_rest,'WMI Rest', save_direction_figure)
-    # In[34]:
+    functions.HistoPlot(only_whisking_WMI,'WMI Rest', save_direction_figure)
+    # In[34]:motionkkjkjk
     # Ploting Pupil
 
     fig7 = plt.figure(figsize=(17, 3))
@@ -768,6 +644,7 @@ fig = px.histogram(Speed_corr_histo_data, x="Correlation", color="Speed validity
                          hover_data=Speed_corr_histo_data.columns, nbins=15,barmode='relative',  opacity = 0.5, color_discrete_map=color_map )
 fig.update_layout(plot_bgcolor='white')
 fig.update_traces(marker_line_color='white', marker_line_width=2)
+
 save_direction_histo = os.path.join(save_direction_figure, "Speed_corr_validity.png")
 
 ###########################
@@ -881,26 +758,7 @@ if DO_MOTION == 1:
     ax.plot(TIme, Mean__dF, color="red", alpha= 0.5)
     plt.title("mean dF vs face motion")
     functions.save_fig("mean_dF_VS_facemotion.png", save_direction_figure,fig102)
-    # Calcolating Periodic correlation between face motion and df/f
-    Periodic_face_corr = []
-    for i in range(len(dF_MOTION_NO_RUN)):
-        COrrelation = pearsonr(whisk_NoRun, dF_MOTION_NO_RUN[i])
-        Periodic_face_corr.append(COrrelation[0])
 
-    # In[47]:
-
-
-    # Periodic face_motion and Neuron correlation when Speed part is removed
-    Num = np.arange(0, len(dF))
-    sorted_Periodic_face_corr = sorted(Periodic_face_corr)
-    fig13 = plt.figure(figsize=(12, 3))
-    plt.scatter(Num, sorted_Periodic_face_corr, s=40, color="gray")
-    plt.xlabel('Neuron', fontsize=10, labelpad=10)
-    plt.ylabel('correlation', fontsize=10, labelpad=10)
-    plt.title(label='face motion correlation[Speed part removed]  & F Correlation', y=1.05, fontsize=10)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.close(fig13)
     # Comparing face_motion and speed correlation
     fig11 = plt.figure(figsize=(11, 6))
     plt.title(label='Speed & face motion', y=1.05, fontsize=18)
@@ -1076,10 +934,8 @@ fig16 = plt.figure(figsize=(16, 7))
 plt.plot(TIme, speed, )
 plt.plot(TIme, const, linewidth=4)
 plt.margins(x=0)
-for i in range(len(WIN)):
-    start = WIN[i][0]
-    end = WIN[i][1]
-    handle = plt.fill_betweenx(y, start, end, color='lightpink', alpha=.5, label='runing>2(S)')
+for i in Real_Time_S_window2:
+    handle = plt.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing>2(S)')
 plt.legend(handles=[handle], loc=2, prop={'size': 14})
 plt.ylabel('Speed(cm/s)', fontsize=20, labelpad=10)
 plt.xlabel('Time(S)', fontsize=20, labelpad=10)
@@ -1111,17 +967,15 @@ leN = len(dF)
 sp = np.copy(speed)
 sp[sp == 0] = 'nan'
 speed_mean = leN * [np.nanmean(sp)]
-LMI_A_array = np.array(LMI_A)
+LMI_A_array = np.array(LMI)
 LMI_mean_speed = np.stack((LMI_A_array, speed_mean), axis=1)
 functions.save_data('All_LMI_mean_speed', save_data, LMI_mean_speed)
 if DO_MOTION == 1:
     MAx_Val = max(motion)
     Min_Val = min(motion)
     y = np.arange(Min_Val, (MAx_Val + 0.1), 0.1)
-    for i in range(len(WIN_MO)):
-        start = WIN_MO[i][0]
-        end = WIN_MO[i][1]
-        handle = plt.fill_betweenx(y, start, end, color='lightpink', alpha=.5, label='runing>2(S) ± 1S')
+    for i in Real_time_m_window2:
+        handle = plt.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing>2(S) ± 1S')
     plt.legend(handles=[handle], loc=2, prop={'size': 10})
     plt.xlabel('Time(S)', fontsize=15, labelpad=8)
     plt.xticks(fontsize=15)
@@ -1172,10 +1026,8 @@ if DO_MOTION == 1:
     ax3.set_title('speed', fontsize=20, y=1.1)
     ax3.margins(x=0)
 
-    for i in range(len(WIN)):
-        start = WIN[i][0]
-        end = WIN[i][1]
-        handle = ax3.fill_betweenx(y, start, end, color='lightpink', alpha=.5, label='runing')
+    for i in Real_Time_S_window2:
+        handle = ax3.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing')
     # plt.legend(handles=[handle],loc=2, prop={'size': 14})
 
     ax4.plot(x, y4, 'tab:red')
@@ -1186,10 +1038,8 @@ if DO_MOTION == 1:
     ax5.set_title(label='pupil', fontsize=20, y=1.1)
     ax5.margins(x=0)
 
-    for i in range(len(WIN_MO)):
-        start = WIN_MO[i][0]
-        end = WIN_MO[i][1]
-        handle2 = ax4.fill_betweenx(y5_0, start, end, color='lightpink', alpha=.5)
+    for i in Real_time_m_window2:
+        handle2 = ax4.fill_betweenx(y5_0, i[0], i[-1], color='lightpink', alpha=.5)
     ####################################
     plt.xlabel('Time', fontsize=22, labelpad=25)
     plt.xticks(fontsize=25)
@@ -1267,7 +1117,7 @@ if DO_MOTION == 1:
     functions.save_fig("all22.png", save_direction_figure, fig19)
     # # Save variables
     # Calculating_mean
-    WMI = np.array(WMI)
+    WMI = np.array(A_WMI)
     mf = np.copy(motion)
     mf[mf == 0] = 'nan'
     mean_motion = leN * [np.nanmean(mf)]
@@ -1276,10 +1126,6 @@ if DO_MOTION == 1:
     mp[mp == 0] = 'nan'
     mean_pupil = leN * [np.nanmean(mp)]
 
-    whisk_NoRun = np.array(whisk_NoRun)
-    W_NoRun = copy.deepcopy(whisk_NoRun)
-    W_NoRun[W_NoRun == 0] = 'nan'
-    mean_motion_NoRun = leN * [np.nanmean(W_NoRun)]
 else:
     ###############################################
     fig19 = plt.figure(figsize=(36, 20))
@@ -1335,8 +1181,8 @@ else:
 ############################################
 
 if DO_MOTION == 1:
-    valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme,valid_neurons_speed, save_direction030, dF, speed, "speed")
-    valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag(TIme,valid_neurons_face, save_direction030, dF, motion, "face motion")
+    valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme,valid_neurons_speed, save_direction030, dF, speed, "speed",speed_corr)
+    valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag(TIme,valid_neurons_face, save_direction030, dF, motion, "face motion",face_corr)
 
     lag_results = {
         'speed_lag_valid_ROIs': valid_speed_lag,
@@ -1354,10 +1200,10 @@ if DO_MOTION == 1:
             json.dump(lag_results, file)
 
 else:
-    valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme, valid_neurons_speed, save_direction030, dF, speed, "speed")
+    valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme, valid_neurons_speed, save_direction030, dF, speed, "speed", speed_corr)
     print("End of lag calculation")
 if Do_pupil == 1:
-    pupil_lag, lag_mean_dF_pupil = functions.lag(TIme,valid_neurons_pupil, save_direction030, dF, pupil, "pupil")
+    pupil_lag, lag_mean_dF_pupil = functions.lag(TIme,valid_neurons_pupil, save_direction030, dF, pupil, "pupil",pupil_corr)
 
 #save settings
 
@@ -1367,39 +1213,6 @@ if Do_pupil == 1:
 #########################################
 if DO_MOTION ==1:
 
-    LMI  # 'Absolut_LMI' #1 For calculating this LMI ---> F_Run= values that they are in the running window(windows of at least 2 second that mouse runs continuously) also above threshold
-    #      F_Rest=values that lower than threshold no matter values inside Running window or not
-
-    LMI_P  # 'Periodic LMI' #2 For calculating this LMI ---> F_Run= All values of dF in the runing window no mattre mouse if it is above or belove threshold
-    #     F_Rest= all values of dF out of running windows
-
-    WMI  # 'Absolut_WMI' #3 This WMI considers all values of face motion which is above the threshold as whisking
-
-    WMI_rest  # 4 before calculating this WMI periods that mouse is running + 1 second before and after are removed frome whole trace
-
-    speed_mean  # 5 mean of speed (zero values for whole speed are removed)
-    mean_motion  # 6 calculating face mean motion for whole trace
-    mean_motion_NoRun  # 7 calculating mean face motion for periods out of running window
-    mean_pupil  # 8 mean for pupil
-
-    M_dF_whisking = mean_dF_Motion  # 9 mean dF for all places that face motion is above threshol() no matter it is in the runnig window or not
-    M_dF_Nowhisking = mean_dF_NoMotion  # 10 mean dF for all places that face motion is belove threshol() no matter it is in the runnig window or not
-
-
-    Mean_dF  # 15 mean for whole trace of dF
-
-    mean_dF_NOMotion  # 16 mean no  whisking dF used in the calculating WMI_rst
-    mean_dF_MOtion  # 17 mean whisking dF used in the calculating WMI_rst
-
-    mean_dF_rest
-    mean_dF_run
-
-    #RUN LMI
-    mean_dF_REST
-    mean_dF_RUN
-    # # saveing data in the an exel file
-
-    # In[70]:
 
 
     t = "ROI"
@@ -1409,11 +1222,8 @@ if DO_MOTION ==1:
         columns.append(a)
 
     df = pd.DataFrame(
-        [LMI, LMI_P, WMI, speed_mean, mean_motion, mean_motion_NoRun, mean_pupil, M_dF_whisking, M_dF_Nowhisking, Mean_dF, mean_dF_NOMotion, mean_dF_MOtion,mean_dF_rest, mean_dF_run, mean_dF_REST, mean_dF_RUN],
-        index=['Absolut_LMI', 'Run LMI', 'Absolut_WMI', 'mean_speed', 'total mean motion',
-               'mean motion mouse is not running', 'mean_pupil', 'dF_whisking for absolut WMI',
-               'dF_Nowhisking for absolut WMI','Mean_dF', 'mean_dF NO whisking for Periodic WMI',
-               'mean_dF whisking for Periodic WMI', 'mean dF rest Absolu LMI', 'mean dF run Absolu LMI','mean dF REST Run LMI', 'mean dF RUN RUN LMI'], columns=columns).T
+        [LMI,  WMI, speed_mean],
+        index=['LMI', 'WMI', 'mean_speed'], columns=columns).T
 
     file_name2 = 'variable.xlsx'
     save_direction2 = os.path.join(save_data, file_name2)
@@ -1426,9 +1236,8 @@ else:
         columns.append(a)
 
     df = pd.DataFrame(
-        [LMI, LMI_P, speed_mean, Mean_dF,mean_dF_rest, mean_dF_run, mean_dF_REST, mean_dF_RUN],
-        index=['Absolut_LMI', 'Run LMI', 'mean_speed',
-             'Mean_dF', 'mean dF rest Absolu LMI', 'mean dF run Absolu LMI','mean dF REST Run LMI', 'mean dF RUN RUN LMI'], columns=columns).T
+        [LMI, speed_mean],
+        index=['Absolut_LMI', 'mean_speed'], columns=columns).T
 
     file_name2 = 'variable.xlsx'
     save_direction2 = os.path.join(save_data, file_name2)
@@ -1443,7 +1252,6 @@ if DO_MOTION == 1 :
                  f"Rest Time =  {REST_TIME}\n" \
                  f"Run percentage = {Run_percentage}\n" \
                  f"Whisking Time {Whisking_TIME}\n" \
-                 f"NO Whisking Time {NOWhisking_TIME}\n" \
                  f"Whisking percentage = {Whisking_percentage}\n" \
                  f"neuropil impact factor = {neuropil_impact_factor}\n" \
                  f"F0 calculating method = {F0_method}\nThis session has {len(pupil)} frames\nrelative time base on xml:\n" \
