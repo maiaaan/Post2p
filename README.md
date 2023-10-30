@@ -1,2 +1,2 @@
 # Post2p
-This is a pipline to analyze result of Suite2p and facemap
+Post2p is an integrated software to analyze the results of calcium imaging and behavioral data
