@@ -2,60 +2,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import os.path
-import easygui
-import random
 from scipy.ndimage import filters
 from scipy.signal import correlate
 from matplotlib import gridspec
 import copy
-from matplotlib.gridspec import GridSpec
 from scipy.signal.windows import hamming
+from sklearn.linear_model import LinearRegression
 from scipy.signal import convolve
-# Removing ROIs which are not cell
-def detect_cell(cell,F):
-    removed_ROI=[]
-    keeped_ROI=[]
-    k = 0
-    for i in range(len(cell)):
-        if cell[i][0]==0:
-            removed_ROI.append(i)
-        else:
-            keeped_ROI.append([i, k])
-            k += 1
+from tqdm import tqdm
+import bottleneck as bn
 
+
+def detect_cell(cell, F):
+    removed_ROI = [i for i, c in enumerate(cell) if c[0] == 0]
+    keeped_ROI = [j for j, i in enumerate(cell) if i[0] != 0]
     if len(F) != len(keeped_ROI):
-        removed_ROI = sorted(removed_ROI, reverse=True)
-        for idx in  removed_ROI:
-            if idx < len(F):
-                F.pop(idx)
-        # print(len(removed_ROI), "Non cell ROI were removed")
-    else:
-        print("non cell ROIs are already removed")
-    F = np.array(F)
+        F = np.delete(F, removed_ROI, axis=0)
     return F, keeped_ROI
 
-# def detect_cell(cell,F):
-#     removed_ROI=[]
-#     keeped_ROI=[]
-#     for i in range(len(cell)):
-#         if cell[i][0]==0:
-#             removed_ROI.append(i)
-#         else:
-#             keeped_ROI.append(i)
-#     # print(len(removed_ROI), "non cell ROI were detected")
-#
-#     #removing non cells ROIs
-#
-#     if len(F) != len(keeped_ROI):
-#         removed_ROI = sorted(removed_ROI, reverse=True)
-#         for idx in  removed_ROI:
-#             if idx < len(F):
-#                 F.pop(idx)
-#         # print(len(removed_ROI), "Non cell ROI were removed")
-#     else:
-#         print("non cell ROIs are already removed")
-#     F = np.array(F)
-#     return F
+def creat_H5_dataset(group, variable, variable_name):
+    for name, value in zip(variable_name, variable):
+        group.create_dataset(name, data=value)
 
 #detecting f0
 def sliding_window(F, fs=30, sig= 60, win = 60):
@@ -71,118 +38,21 @@ def deltaF_calculate(F, F0):
         normalized_F[i] = (F[i]-F0[i])/F0[i]
     return normalized_F
 
-
-''' this function will calculate if is there any activity or not for face motion
-input:
-threshold_motion ---> calculated threshold for considering a value in the facemap motion output as moving or not
-motion ---> motion values in the facemap for whisking
-
-output:
-whisk_motion ---->values for whisker motion 
-whisk_No_motion ---->values for whisker No motion
-index_motion ----> coresponding index in the list for whisker mition values
-index_nomotion ----> coresponding index in the list for whisker No mition values '''
-
-def faceMotion_calculate(motion, threshold_motion):
-    whisk_motion=[]
-    whisk_No_motion=[]
-    index_motion=[]
-    index_nomotion=[]
-    for i in range(len(motion)):
-        if motion[i]>threshold_motion:
-            whisk_motion.append(motion[i])
-            index_motion.append(i)
-        else:
-            whisk_No_motion.append(motion[i])
-            index_nomotion.append(i)
-    
-    return whisk_motion, whisk_No_motion, index_motion, index_nomotion
-
-############################################################
-
-def dF_faceMotion(index_motion, index_nomotion,dF ):
-    F_motion=[]
-    for j in range(len(dF)):
-        f_motion=[]
-        for k in range(len(index_motion)):
-            v=index_motion[k]
-            f_motion.append(dF[j][v])
-        F_motion.append(f_motion)
-
-    F_NoMotion=[]
-    for p in range(len(dF)):
-        f_NoMotion=[]
-        for r in range(len(index_nomotion)):
-            v=index_nomotion[r]
-            f_NoMotion.append(dF[p][v])
-        F_NoMotion.append(f_NoMotion)
-    return F_NoMotion, F_motion
-
-
 '''Calculating mean '''
 
 def mean_fluo(dF):
-    mean_dF=[]
-    for i in range(len(dF)):
-        average_dF =np.mean(dF[i])
-        mean_dF.append(average_dF)
+    mean_dF=[(np.mean(dF[i])) for i in range(len(dF))]
     return mean_dF
-#######################################################
-#calculating absolut run and rest index
-
-def RunRest_calculate(speed,th):
-    run=[]
-    rest=[]
-    index_run=[]
-    index_rest=[]
-    for i in range(len(speed)):
-        if speed[i]>th:
-            run.append(speed[i])
-            index_run.append(i)
-        else:
-            rest.append(speed[i])
-            index_rest.append(i)
-    
-    return run, rest, index_run, index_rest
 
 ## normalized df
-
 def Normal_df(dF):
     Normal_df=[]
     for i in range(len(dF)):
         p = max([abs(b) for b in dF[i]])
-        NORMAL_dF=[]
-        for j in range(len(dF[i])):
-            normal_dF=dF[i][j]/p
-            NORMAL_dF.append(normal_dF)
+        NORMAL_dF=[dF[i][j]/p for j in range(len(dF[i]))]
         Normal_df.append(NORMAL_dF)
         
     return Normal_df
-
-####################################################
-# get all data in the folder and combine them
-def get_shuffling_data(data_type):
-    path=easygui.diropenbox(title='select folder contaning '+data_type+' for shuffling')
-    #read WIs
-    TOTAL__data = []
-    for i in os.listdir(path):
-        data = np.load(path+'\\'+i)
-        TOTAL__data.append(data)
-    return TOTAL__data
-######################################################
-#merging data for shuffling and creat a subset of data
-def subset_shuffling_data(total__data,data_for_session):
-    #merge all together
-    total_data =(total__data[0]).tolist()
-    for i in range(1, len(total__data)):
-        total__data[i]=total__data[i].tolist()
-        total_data= total_data + total__data[i]
-    total_data=total_data+data_for_session
-    #Shuffling and creat a random subset of data
-    Shuffled_data=random.sample(total_data, len(data_for_session))
-    #Total_LMI=np.concatenate((Total_LMI,LMI_P))
-    return Shuffled_data  
-###################################################
 
 def interpolation1(sampel_data_for_interpolation, data_for_interpolating):
     h=str([k for k, v in globals().items() if v is data_for_interpolating][0])
@@ -193,27 +63,6 @@ def interpolation1(sampel_data_for_interpolation, data_for_interpolating):
     data_for_interpolating = np.interp(x, xp, fp)
     print("data for ",h," were interpolated")
     return data_for_interpolating
-################################################
-#Plots
-def HistoPlot(X,xLabel,save_direction1):
-    # ploting
-    fig14 = plt.figure(figsize=(16, 7))
-    plt.hist(X, weights=(np.ones(len(X)) / len(X)) * 100, edgecolor="black", color="gray", bins=20)
-    plt.ylabel('percentage', size=20, labelpad=10)
-    plt.xlabel(xLabel, size=20, labelpad=10)
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-
-    median_absolut = np.median(X)
-    plt.axvline(x=median_absolut, label='median', linewidth=4)
-    plt.legend(bbox_to_anchor=(1.0, 1), prop={'size': 14}, )
-    file_name14 = xLabel
-    save_direction14 = os.path.join(save_direction1, file_name14)
-    isExist = os.path.exists(save_direction14)
-    if isExist:
-        fig14.savefig(save_direction14)
-    else:
-        fig14.savefig(save_direction14)
 
 def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     length = len(X)
@@ -230,53 +79,56 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     end = length + plot_duration
     all_lag = []
     positive_dF = []
-    for i in valid_neurons:
-        correlation = correlate(dF[i], X)
-        correlation = correlation.tolist()
-        interested_zone = correlation[sstart:eend]
-        if speed_corr[i] >= 0:
-            positive_dF.append(dF[i])
-            max_lagI = max(interested_zone)
-            Max_index = interested_zone.index(max_lagI)
-        else:
-            pass
+    if len(valid_neurons)>0:
+        for i in tqdm(valid_neurons, desc= 'calculating lag'):
+            correlation = correlate(dF[i], X)
+            correlation = correlation.tolist()
+            interested_zone = correlation[sstart:eend]
+            if speed_corr[i] >= 0:
+                positive_dF.append(dF[i])
+                max_lagI = max(interested_zone)
+                Max_index = interested_zone.index(max_lagI)
 
-        lagI = (Max_index - corr_interval-1) / freq
-        all_lag.append(lagI)
-        gs = gridspec.GridSpec(6, 1)
-        fig1 = plt.figure(figsize=(14, 7))
-        ax2 = plt.subplot(gs[0:4, 0])
-        ax1 = plt.subplot(gs[4, 0])
-        ax3 = plt.subplot(gs[5, 0])
-        ax3.plot(Time, X, label=label, color="teal")
-        ax3.set_xlabel('Time(s)')
-        ax3.set_yticks([])
-        ax1.plot(Time, dF[i], label="dF ROI " + str(i), color="pink")
-        ax1.set_xticks([])
-        ax1.set_yticks([])
-        ax2.plot(time_corr[start:end], correlation[start:end], label="correlation")
-        ax2.set_title("dF and " + label + " correlation", fontsize=11)
-        ax2.axvline(0, color='plum', linestyle='dashed', linewidth=1.5, label='0')
-        ax2.annotate(f'lag(s) =  {lagI:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
-                     ha='left')
-        ax2.margins(x=0)
-        ax1.margins(x=0)
-        ax3.margins(x=0)
-        gs.update(hspace=0.6)
-        ax1.legend(loc="upper right", fontsize="x-small")
-        ax2.legend(loc="upper right", fontsize="x-small")
-        ax3.legend(loc="upper right", fontsize="x-small")
-        file_name = "ROI " + str(i) + " " + label + " correlation"
-        save_direction = os.path.join(save_direction03, file_name)
-        isExist = os.path.exists(save_direction)
-        if isExist:
-            pass
-        else:
-            plt.savefig(save_direction)
-        plt.close(fig1)
+                lagI = (Max_index - corr_interval-1) / freq
+                all_lag.append(lagI)
+                gs = gridspec.GridSpec(6, 1)
+                fig1 = plt.figure(figsize=(14, 7))
+                ax2 = plt.subplot(gs[0:4, 0])
+                ax1 = plt.subplot(gs[4, 0])
+                ax3 = plt.subplot(gs[5, 0])
+                ax3.plot(Time, X, label=label, color="teal")
+                ax3.set_xlabel('Time(s)')
+                ax3.set_yticks([])
+                ax1.plot(Time, dF[i], label="dF ROI " + str(i), color="pink")
+                ax1.set_xticks([])
+                ax1.set_yticks([])
+                ax2.plot(time_corr[start:end], correlation[start:end], label="correlation")
+                ax2.set_title("dF and " + label + " correlation", fontsize=11)
+                ax2.axvline(0, color='plum', linestyle='dashed', linewidth=1.5, label='0')
+                ax2.annotate(f'lag(s) =  {lagI:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
+                             ha='left')
+                ax2.margins(x=0)
+                ax1.margins(x=0)
+                ax3.margins(x=0)
+                gs.update(hspace=0.6)
+                ax1.legend(loc="upper right", fontsize="x-small")
+                ax2.legend(loc="upper right", fontsize="x-small")
+                ax3.legend(loc="upper right", fontsize="x-small")
+                file_name = "ROI " + str(i) + " " + label + " correlation"
+                save_direction = os.path.join(save_direction03, file_name)
+                isExist = os.path.exists(save_direction)
+                if isExist:
+                    pass
+                else:
+                    plt.savefig(save_direction)
+                plt.close(fig1)
+            else:
+                pass
+    if positive_dF == []:
+        raise Exception("No neuron has positive correlation")
     positive_dF = np.array(positive_dF)
 
-    ######################################################
+    #---------------------------------------------------
     mean_posetive_dF = np.mean(positive_dF, 0)
     positive_correlation_mean = correlate(mean_posetive_dF, X)
     positive_correlation_mean = positive_correlation_mean.tolist()
@@ -284,7 +136,6 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     max_mean_lag_pos = max(positive_interested_zone)
     max_index_mean_pos = positive_interested_zone.index(max_mean_lag_pos)
     lag_mean_pos = (max_index_mean_pos - corr_interval-1) / freq
-
 
     fig = plt.figure(figsize=(11, 11))
     gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
@@ -312,67 +163,89 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     plt.savefig(save_direction003)
     plt.close(fig)
     return all_lag, lag_mean_pos
-#Permutation
 
-def permutation(dF, speed,label, save_direction202,sampels = 1000):
+def permutation(dF, speed,label, save_direction202,samples = 1000):
+    label2 = label + " permutation Processing"
     dF_p = copy.deepcopy(dF)
-    speed_p = speed/max(speed)
-    for i in range(len(dF_p)):
-        dF_p[i]= dF_p[i]/max(dF_p[i])
-    dF_p= dF_p.tolist()
+    speed_p = speed/np.max(speed)
+    weights = np.ones(samples) / samples
+
+    random_list = (np.random.choice(np.arange(0, len(speed_p) - 2), samples, replace=False))
+    speed_shuffeled = [np.roll(speed_p, i) for i in random_list]
+    dF_p = [i/np.max(i) for i in dF_p]
+
     out_neurons = []
     valid_neurons = []
-    for s in range(len(dF_p)):
-        random_list = (np.random.choice(np.arange(0, len(dF_p[s]) - 2), sampels, replace=False))
-        df_shuffeled = []
-        for i in random_list:
-            df_shuffeled_i = dF_p[s][i:] + dF_p[s][0:i]
-            df_shuffeled.append(df_shuffeled_i)
+    fig, (ax, ax2) = plt.subplots(2, 1, figsize=(9, 7), gridspec_kw={'height_ratios': [3, 1]})
+    for s in tqdm(range(len(dF_p)) ,desc=label2):
         real_corr, _= pearsonr(speed_p, dF_p[s])
+        permuted_corrs = np.array([pearsonr(speed_shuffeled[i], dF_p[s])[0] for i in range(samples)])
+        p_value = np.sum(np.abs(permuted_corrs) >= np.abs(real_corr)) / samples
 
-        permuted_corrs = []
-        for i in range(len(df_shuffeled)):
-            correlation, _ = pearsonr(speed_p, df_shuffeled[i])
-            permuted_corrs.append(correlation)
-
-        p_value = np.sum(np.abs(permuted_corrs) >= np.abs(real_corr)) / sampels
-
-
-        fig = plt.figure(figsize=(9, 7))
-        gs = GridSpec(2, 1, height_ratios=[3, 1])
-        ax = fig.add_subplot(gs[0])
-        ax2 = fig.add_subplot(gs[1])
-
-        ax.hist(permuted_corrs,weights=(np.ones(len(permuted_corrs)) / len(permuted_corrs)) * 100, bins=30, alpha=0.5, label='Permutations')
+        ax.clear()
+        ax2.clear()
+        ax.hist(permuted_corrs, weights=weights * 100, bins=30, alpha=0.5, label='Permutations')
         ax.axvline(real_corr, color='red', linestyle='dashed', linewidth=2, label='Observed')
         ax.set_xlabel('Correlation Coefficient')
         ax.set_ylabel('Percentage')
-        ax.set_title('Permutation Test(' + label + ')')
+        ax.set_title(f'Permutation Test({label})')
         ax.legend(loc='upper right', fontsize='small')
         ax.annotate(f'p-value = {p_value:.3f}', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=9,
-                     va='top', ha='left')
+                    va='top', ha='left')
+
         ax2.plot(dF_p[s], label='dF')
-        ax2.set_ylabel("ROI"+ str(s))
-        ax2.plot(speed_p, alpha=0.7, label= label)
+        ax2.set_ylabel(f'ROI {s}')
+        ax2.plot(speed_p, alpha=0.7, label=label)
         ax2.set_yticks([])
         ax2.margins(x=0)
         ax2.legend(loc='upper right', fontsize='small')
-        file_name = "ROI " + str(s) +" " + label + " Permutation"
+
+        file_name = f'ROI {s} {label} Permutation'
         save_direction = os.path.join(save_direction202, file_name)
-        isExist = os.path.exists(save_direction)
-        if isExist:
-            pass
-        else:
+        is_exist = os.path.exists(save_direction)
+        if not is_exist:
             fig.savefig(save_direction)
-        plt.close(fig)
 
         if p_value > 0.05:
             out_neurons.append(s)
         else:
             valid_neurons.append(s)
-    return valid_neurons, out_neurons
 
-def calculate_F0(F, fs, percentile, mode = 'hamming', win = 60, sig = 60):
+    plt.close(fig)
+    return valid_neurons, out_neurons
+def calculate_alpha (F, Fneu):
+    Slope = []
+    per = np.arange(5,101,5)
+    for k in range(len(F)):
+        b = 0
+        All_F, percentile_Fneu = [], []
+        for i in per:
+            percentile_before = np.percentile(Fneu[k], b)
+            percentile_now = np.percentile(Fneu[k], i)
+            index_percentile_i = np.where((percentile_before <= Fneu[k]) & (Fneu[k] < percentile_now))
+            b = i
+            F_percentile_i = F[k][index_percentile_i]
+            perc_F_i = np.percentile(F_percentile_i, 5)
+            percentile_Fneu.append(percentile_now)
+            All_F.append(perc_F_i)
+
+        #fitting a linear regression model
+        x = np.array(percentile_Fneu).reshape(-1, 1)
+        y = np.array(All_F)
+        model = LinearRegression()
+        model.fit(x, y)
+        slope = model.coef_[0]
+        Slope.append(slope)
+    remove,alpha = [],[]
+    for i in range(len(Slope)):
+        if Slope[i] <= 0:
+            remove.append(i)
+        else:
+            alpha.append(Slope[i])
+    alpha = np.mean(alpha)
+    return alpha, remove
+
+def calculate_F0(F, fs, percentile, mode = 'sliding', win = 60, sig = 60):
     if mode == 'hamming':
         F0 = []
         window_duration = 0.5  # Duration of the Hamming window in seconds
@@ -392,18 +265,20 @@ def calculate_F0(F, fs, percentile, mode = 'hamming', win = 60, sig = 60):
         F0 = filters.maximum_filter1d(F0, win * fs, mode='wrap')
     return F0
 
-def find_intervals(id_below_thr_speed, interval, RealTime):
+def find_intervals(selected_ids, interval, RealTime, exclude_S = 0):
+    #interval: minimum number of frames for each interval
+    #exclude_S: frames that should be removed at the beginning of window
     Real_TIME_W = []
     motion_window = []
     motion_index =[]
     window = []
-    for i in range(len(id_below_thr_speed)):
-        if (id_below_thr_speed[i] + 1) in id_below_thr_speed:
-            window.append(id_below_thr_speed[i])
-        elif (id_below_thr_speed[i] - 1) in id_below_thr_speed:
-            window.append(id_below_thr_speed[i])
+    for i in range(len(selected_ids)):
+        if (selected_ids[i] + 1) in selected_ids:
+            window.append(selected_ids[i])
+        elif (selected_ids[i] - 1) in selected_ids:
+            window.append(selected_ids[i])
             if len(window)>interval:
-                motion_index.append(window)
+                motion_index.append(window[exclude_S:])
                 window = []
             else:
                 window = []
@@ -420,30 +295,6 @@ def find_intervals(id_below_thr_speed, interval, RealTime):
         Real_TIME_W.append(rael_time_W)
     return motion_index, motion_window, Real_TIME_W
 
-def quiescence_interval(motion_window, ids):
-    quiescence_window = []
-    quiescence_index = []
-    for i in range(len(motion_window)-1):
-        Q_window_i = []
-        if i == 0:
-            A = ids[0]
-            E = motion_window[i][0]
-
-        elif i == len(motion_window):
-            A = motion_window[i][-1]
-            E = ids[-1]
-        else:
-            A = motion_window[i][-1]
-            E = motion_window[i+1][0]
-        interval = E - A
-        if interval >150:
-            Q_window_i.append(A+45)
-            Q_window_i.append(E-45)
-            Q_index_i = np.arange(A+45, E-44)
-            quiescence_index.append(Q_index_i)
-            quiescence_window.append(Q_window_i)
-    return quiescence_window, quiescence_index
-
 def save_data(file_name, save_dir, data):
     save_direction = os.path.join(save_dir, file_name)
     isExist = os.path.exists(save_direction)
@@ -453,26 +304,64 @@ def save_data(file_name, save_dir, data):
         np.save(save_direction, data, allow_pickle=True)
 def save_fig(fig_name, save_dir, fig):
     save_direction = os.path.join(save_dir, fig_name)
-    isExist = os.path.exists(save_direction)
-    if isExist:
-        pass
-    else:
-        fig.savefig(save_direction)
+    fig.savefig(save_direction)
     plt.close(fig)
 
-def plot_matrix_synchro(synchro, settings,path, show=True):
-    plt.ioff()
-    plt.matshow(synchro)
-    plt.colorbar()
+def detect_valid_neurons(valid_neurons, X):
+    valid_X = [X[i] for i in valid_neurons]
+    valid_X = np.array(valid_X)
+    return valid_X
 
-    plt.xlabel('ROI')
-    plt.ylabel('ROI')
-    #    plt.title('Synchrony')
-
-    plt.savefig('{}/synchrony.pdf'.format(path))
-    plt.savefig('{}/synchrony'.format(path))
-
-    if show == True:
-        plt.show()
+def make_dir (Base_path, file_name1):
+    save_direction1 = os.path.join(Base_path, file_name1)
+    isExist1 = os.path.exists(save_direction1)
+    if isExist1:
+        pass
     else:
-        plt.close()
+        os.mkdir(save_direction1)
+    return save_direction1
+def save_exel(file_name, save_direction, exel):
+    save_xl_skew = os.path.join(save_direction, file_name)
+    exel.to_excel(save_xl_skew)
+def convolve(Time, speed, motion, pupil,save_direction):
+    tau=1.3 #characteristic decay time
+    kernel_size=10 #size of the kernel in units of tau
+    dt=np.mean(np.diff(Time)) #spacing between successive timepoints
+    n_points=int(kernel_size*tau/dt)
+    kernel_times=np.linspace(-n_points*dt,n_points*dt,2*n_points+1) #linearly spaced array from -n_points*dt to n_points*dt with spacing dt
+    kernel=np.exp(-kernel_times/tau) #define kernel as exponential decay
+    kernel[kernel_times<0]=0 #set to zero for negative times
+    fig,ax=plt.subplots()
+    ax.plot(kernel_times,kernel)
+    ax.set_xlabel('time (s)')
+    save_fig("convolotion_kernel",save_direction, fig)
+    speed = convolve(speed,kernel,mode='same')*dt
+    motion = convolve(motion,kernel,mode='same')*dt
+    pupil = convolve(pupil,kernel,mode='same')*dt
+    return speed, motion, pupil
+def detect_blinking(pupil,pupil_id,window =4):
+    """ March 2024 - Bacci Lab - faezeh.rabbani97@gmail.com
+    ...........................................................................
+    TOverall, this code calculates the moving variance of the pupil data using a
+    window size of 4, which is used in this blink detection algorithms to identify
+    sudden changes or fluctuations in pupil size that might indicate blinks.
+    - - - - - - - - - - - - - - - Method  - - - - - - - - - - - - - - - - - - -
+    This is a function provided by the Bottleneck library in Python.
+    The move_var function calculates the moving variance along a given axis
+     using a specified window size. The function divides the range of fluctuation
+      by 20 to determine a threshold value. Any value above threshold is considered as blinking.
+    - - - - - - - - - - - - - - - INPUT - - - - - - - - - - - - - - - - - - - -
+    pupil                       pupil trace extracted from facemap
+    pupil_id                    the ids correspond to pupil frames made by np.arra
+    nge
+    window                      Size of window to calculate variance inside
+    - - - - - - - - - - - - - - - OUTPUT - - - - - - - - - - - - - - - - - - -
+    ID_without_blinking         pupil ids after blinking was removed
+    ...........................................................................
+    """
+    blink_detection = bn.move_var(pupil, window=window, min_count=1)
+    threshold = (np.max(blink_detection) - np.min(blink_detection)) / 20
+    blink_indices = {i for i, val in enumerate(blink_detection) if val > threshold}
+    blink_indices.update({i + j for i in blink_indices for j in range(-5, 6)})
+    ID_without_blinking = np.setdiff1d(pupil_id, sorted(blink_indices))
+    return ID_without_blinking
