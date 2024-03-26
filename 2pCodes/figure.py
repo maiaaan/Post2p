@@ -56,7 +56,7 @@ def general_figure(TIme, normal_pupil,speed, normal_motion,dF, save_direction_fi
     plt.yticks(fontsize=20)
     functions.save_fig(label, save_direction_figure, fig)
 
-def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_label, y_labe, Title, save_direction):
+def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_label, y_labe, Title, save_direction,svg):
     fig, ax = plt.subplots(figsize=(4, 5))
     boxplot1 = ax.boxplot(data1, positions=[1], widths=0.6, patch_artist=True)
     boxplot2 = ax.boxplot(data2, positions=[2], widths=0.6, patch_artist=True)
@@ -70,21 +70,23 @@ def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_lab
         box.set(color='rosybrown', facecolor='rosybrown')
     for box in boxplot4['boxes']:
         box.set(color='darkseagreen', facecolor='darkseagreen')
-
     # Add labels and title
     ax.set_xticks([1, 2, 3, 4])
     ax.set_xticklabels([label1,label2,label3,label4])
     ax.set_ylabel(y_labe)
     ax.set_title(Title)
+    if svg == True:
+        svg_name = "activity_state.svg"
+        save_direction_svg = os.path.join(save_direction, svg_name)
+        fig.savefig(save_direction_svg)
     functions.save_fig(fig_label,save_direction,fig)
-
 def simple_plot(time, y,save_direction, label ):
     fig = plt.figure(figsize=(7, 2))
     plt.plot(time, y)
     functions.save_fig(label, save_direction, fig)
 
 def scatter_plot(NUM,y, chosen_neurons,save_direction_figure, label:str, xlabel:str, ylabel:str,
-                 condition_label1:str, condition_label2:str, color1='red', color2 = 'lightgreen'):
+                 condition_label1:str, condition_label2:str,svg, color1='red', color2='lightgreen'):
     NUM_color = np.arange(0, len(NUM))
     fig_label = label + ".png"
     fig = plt.figure(figsize=(14, 6))
@@ -99,6 +101,10 @@ def scatter_plot(NUM,y, chosen_neurons,save_direction_figure, label:str, xlabel:
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
     plt.legend(handles=legend_elements)
+    if svg == True:
+        svg_name = label + ".svg"
+        save_direction_svg = os.path.join(save_direction_figure, svg_name)
+        fig.savefig(save_direction_svg)
     functions.save_fig(fig_label, save_direction_figure, fig)
 
 def GUIimage(time, trace, figure_path, title):
@@ -126,15 +132,19 @@ def pie_plot(fig_title, save_direction, label1, label2, data_size1, data_size2):
             autopct='%1.1f%%')
     plt.title(fig_title)
     functions.save_fig(title, save_direction, fig)
-def pupil_state(categories, values,save_direction_figure,ylabel, title):
+def pupil_state(categories, values,save_direction_figure,ylabel,title,svg):
     save_name = title + ".png"
     fig_p, ax = plt.subplots(figsize=(5, 6))
     ax.scatter(categories, values, color='yellowgreen', s=120)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+    if svg == True:
+        svg_name = title + ".svg"
+        save_direction_svg = os.path.join(save_direction_figure, svg_name)
+        fig_p.savefig(save_direction_svg,format = 'svg')
     functions.save_fig(save_name, save_direction_figure, fig_p)
 
-def double_trace_plot(TIme,Mean__dF,speed, save_direction_figure,x_label,y_label1, y_label2,title):
+def double_trace_plot(TIme,Mean__dF,speed, save_direction_figure,x_label,y_label1, y_label2,title,svg):
     fig, ax = plt.subplots(figsize=(10, 7))
     save_title = title + ".png"
     ax2 = ax.twinx()
@@ -145,8 +155,12 @@ def double_trace_plot(TIme,Mean__dF,speed, save_direction_figure,x_label,y_label
     ax2.set_ylabel(y_label2, color="green")
     plt.tight_layout()
     plt.title(title)
+    if svg == True:
+        svg_name = title + ".svg"
+        save_direction_svg = os.path.join(save_direction_figure, svg_name)
+        fig.savefig(save_direction_svg ,format = 'svg')
     functions.save_fig(save_title, save_direction_figure, fig)
-def plot_running(TIme, speed, Real_Time_Running,filtered_speed,save_direction_figure,ylabel,xlabel,title):
+def plot_running(TIme, speed, Real_Time_Running,filtered_speed,save_direction_figure,ylabel,xlabel,title,svg):
     max_val = max(filtered_speed)
     y = np.arange(0, max_val, 0.1)
     fig25, ax = plt.subplots(figsize=(17, 6))
@@ -160,6 +174,10 @@ def plot_running(TIme, speed, Real_Time_Running,filtered_speed,save_direction_fi
     ax.axhline(threshold, color='orange', lw=2)
     for i in Real_Time_Running:
         plt.fill_betweenx(y, i[0], i[-1], color='lightpink', alpha=.5, label='runing>2(S)')
+    if svg == True:
+        svg_name = "running.svg"
+        save_direction_svg = os.path.join(save_direction_figure, svg_name)
+        fig25.savefig(save_direction_svg,format = 'svg')
     functions.save_fig(title, save_direction_figure, fig25)
 
 def power_plot(Mean__dF,Fs,save_direction_figure):
@@ -209,3 +227,11 @@ def HistoPlot(X,xLabel,save_direction1):
     file_name14 = xLabel
     save_direction14 = os.path.join(save_direction1, file_name14)
     fig14.savefig(save_direction14)
+
+def simple_plot_SVG(time, trace, figure_path, title):
+    fig, ax = plt.subplots(figsize=(10,2))
+    ax.plot(time, trace)
+    ax.margins(x=0)
+    fig_path2 = os.path.join(figure_path,title)
+    fig.savefig(fig_path2, format = 'svg')
+    plt.close(fig)

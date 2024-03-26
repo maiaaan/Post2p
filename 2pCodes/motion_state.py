@@ -158,7 +158,8 @@ def mean_interval (X, interval, method):
 ##------------------------------------Plotting_states2-----------------------------###
 def stage_plot(Real_Time_Aroused_Running, Real_time_Not_aroused_activity2, Real_Time_rest_window2,
                 Real_time_Aroused_stationary2, speed, motion, F, real_time,
-                Aroused_Running_window, Not_aroused_activity_window2, rest_window2, Aroused_stationary_window2, save_dir, pupil,S_filter_kernel):
+                Aroused_Running_window, Not_aroused_activity_window2, rest_window2,
+               Aroused_stationary_window2, save_dir, pupil,S_filter_kernel,svg):
     speed = gaussian_filter1d(speed,S_filter_kernel)
     min_val = np.min(motion)
     max_val = np.max(motion)
@@ -251,6 +252,9 @@ def stage_plot(Real_Time_Aroused_Running, Real_time_Not_aroused_activity2, Real_
     #ax[1].set_yticks([])
     ax[1].set_xticks([])
     ax[1].margins(x=0)
+    if svg == True:
+        save_direction_svg = os.path.join(save_dir, "activity_states2.svg")
+        fig2.savefig(save_direction_svg,format = 'svg')
     functions.save_fig("activity_states2", save_dir, fig2)
 
     fig, axs = plt.subplots(3, 1, figsize=(15, 5))
@@ -287,6 +291,9 @@ def stage_plot(Real_Time_Aroused_Running, Real_time_Not_aroused_activity2, Real_
         axs[0].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
         axs[1].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
         axs[2].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
+    if svg == True:
+        save_direction_svg = os.path.join(save_dir, "activity_states.svg")
+        fig.savefig(save_direction_svg,format = 'svg')
     functions.save_fig("activity_states",save_dir,fig)
 
 
@@ -294,7 +301,7 @@ def stage_plot(Real_Time_Aroused_Running, Real_time_Not_aroused_activity2, Real_
 #                 Real_time_Aroused_stationary2, speed, motion, F, real_time,
 #                 Aroused_Running_window, Not_aroused_activity_window2, rest_window2, Aroused_stationary_window2, save_dir, pupil)
 
-def kruskal_test(valid_neuron,active_movement_window2, inactive_window, rest_window2, only_whisking_window, save_direction ):
+def kruskal_test(valid_neuron,active_movement_window2, inactive_window, rest_window2, only_whisking_window, save_direction,svg):
     mean_active = mean_max_interval(valid_neuron, active_movement_window2, method='mean')
     mean_Intermediate = mean_max_interval(valid_neuron, inactive_window, method='mean')
     mean_rest = mean_max_interval(valid_neuron, rest_window2, method='mean')
@@ -332,7 +339,6 @@ def kruskal_test(valid_neuron,active_movement_window2, inactive_window, rest_win
     file_name = "tukey_results.xlsx"
     save_direction2 = os.path.join(save_direction, file_name)
     df_results.to_excel(save_direction2, index=False)
-
     fig, ax = plt.subplots(figsize=(6, 8))
     boxplot1 = ax.boxplot(mean_rest, positions=[1], widths=0.6, patch_artist=True)
     boxplot2 = ax.boxplot(mean_Intermediate, positions=[2], widths=0.6, patch_artist=True)
@@ -354,4 +360,7 @@ def kruskal_test(valid_neuron,active_movement_window2, inactive_window, rest_win
     ax.set_xticklabels(['Rest','paw Movement', 'As', 'Running'])
     ax.set_ylabel('mean')
     ax.set_title('z-scored dF/F')
+    if svg == True:
+        save_direction_svg = os.path.join(save_direction,"activity_B_states.svg")
+        fig.savefig(save_direction_svg,format = 'svg')
     functions.save_fig("activity_B_states", save_direction, fig)

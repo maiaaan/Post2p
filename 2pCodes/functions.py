@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from scipy.signal import convolve
 from tqdm import tqdm
 import bottleneck as bn
-
+from scipy.ndimage import gaussian_filter1d
 
 def detect_cell(cell, F):
     removed_ROI = [i for i, c in enumerate(cell) if c[0] == 0]
@@ -163,6 +163,16 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     plt.savefig(save_direction003)
     plt.close(fig)
     return all_lag, lag_mean_pos
+
+def detect_bad_neuropils(detected_roi,neuropil, F, iscell,direction):
+    neuropil_F = gaussian_filter1d(neuropil, 10)
+    F_F = gaussian_filter1d(F,10)
+    chosen_cell3 = [i for i in range(len(neuropil_F)) if np.std(F_F[i])/np.std(neuropil_F[i]) < 1.6]
+    neuron_chosen3 = [i for i in chosen_cell3 if i in detected_roi]
+    for i in chosen_cell3:
+        iscell[i][0] = 0
+        #np.save(direction, iscell, allow_pickle=True)
+    return iscell, neuron_chosen3
 
 def permutation(dF, speed,label, save_direction202,samples = 1000):
     label2 = label + " permutation Processing"

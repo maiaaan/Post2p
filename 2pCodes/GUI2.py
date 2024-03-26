@@ -506,7 +506,7 @@ class Ui_MainWindow(object):
     def get_convolve_state(self):
         return self.Convolve_checkBox.isChecked()
 
-    def get_generate_f_state(self):
+    def get_generate_svg_state(self):
         return self.generate_figure_checkBox.isChecked()
 
 
@@ -592,16 +592,16 @@ class Ui_MainWindow(object):
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.General), _translate("MainWindow", "General"))
 
 
-class MyWindow(QtWidgets.QMainWindow):
-    def __init__(self, image_file, data_file):
-        super().__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self,figure_path, LenData)
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    data_path = LenData
-    figure_path = figure_path
-    window = MyWindow(figure_path, LenData)
-    window.show()
-    app.exec_()
+# class MyWindow(QtWidgets.QMainWindow):
+#     def __init__(self, image_file, data_file):
+#         super().__init__()
+#         self.ui = Ui_MainWindow()
+#         self.ui.setupUi(self,figure_path, LenData)
+# if __name__ == "__main__":
+#     import sys
+#     app = QtWidgets.QApplication(sys.argv)
+#     data_path = LenData
+#     figure_path = figure_path
+#     window = MyWindow(figure_path, LenData)
+#     window.show()
+#     app.exec_()

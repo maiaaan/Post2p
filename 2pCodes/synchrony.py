@@ -99,8 +99,8 @@ def randomizer(S):
 def get_average_rand_synchronicity(spikes, N_iterations, thr_spikes, w_size=10):
     matrix_shuffled = np.array([synchrony(randomizer(spikes), thr_spikes, w_size=w_size) for n in tqdm(range(0, N_iterations))])
     return matrix_shuffled
-def plot_data(a, b, save_path, ax=None):
-    save_path = save_path + "\spike correlation.png"
+def plot_data(a, b, save_path, svg, ax=None):
+    save_path2 = save_path + "\spike correlation.png"
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -124,5 +124,9 @@ def plot_data(a, b, save_path, ax=None):
     ax.spines["bottom"].set_visible(False)
     ax.spines["left"].set_visible(False)
     plt.title('Distribution of STTC')
-    plt.savefig(save_path)
+    if svg == True:
+        svg_name = "spike correlation.svg"
+        save_direction_svg = os.path.join(save_path, svg_name)
+        plt.savefig(save_direction_svg,format = 'svg')
+    plt.savefig(save_path2)
 

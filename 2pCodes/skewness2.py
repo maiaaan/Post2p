@@ -9,7 +9,7 @@ import os.path
 from scipy.stats import zscore
 
 def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Running, Z_mean_paw,
-             Z_mean_AS,Z_mean_rest,speed_corr,face_corr,TIme, pupil, speed, motion):
+             Z_mean_AS,Z_mean_rest,speed_corr,face_corr,TIme, pupil, speed, motion,svg):
     """ March 2024 - Bacci Lab - faezeh.rabbani97@gmail.com
 
     ...........................................................................
@@ -43,6 +43,11 @@ def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Ru
     skewness = skew(dF, axis=1)
     high_skew = np.where(skewness > threshold)[0]
     low_skew = np.where(skewness <= threshold)[0]
+    skewness_high_skew = [skewness[i] for i in high_skew]
+    skewness_low_skew = [skewness[i] for i in low_skew]
+    mean_high_skew = np.mean(skewness_high_skew)
+    mean_low_skew = np.mean(skewness_low_skew)
+
 
     #plot skewness Histogram
     for i in high_skew:
@@ -111,21 +116,22 @@ def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Ru
     Label2 = 'Skew > ' + str(threshold)
     figure.box_plot(skew_variables['Z_mean_Running'], skew_variables['Z_mean_rest'], not_skew_variable['Z_mean_Running'],
                     not_skew_variable['Z_mean_rest'], 'Srun', 'Srest', 'NSrun',
-                    "NSrest", "skew_notSkew_activity", 'z-scored dF/F', '', save_direction_skew)
+                    "NSrest", "skew_notSkew_activity", 'z-scored dF/F', '', save_direction_skew,svg)
 
     NUM_cell =  np.arange(0, len(dF))
     figure.scatter_plot(NUM_cell,speed_corr, high_skew,save_direction_skew, 'Speed & F Correlation','Neuron', 'correlation',
-                 Label1, Label2 , color1='red', color2 = 'mediumpurple')
+                 Label1, Label2,svg, color1='red', color2 = 'mediumpurple')
 
     NUM_LMI = np.arange(0, len(LMI))
     figure.scatter_plot(NUM_LMI,speed_corr, high_skew,save_direction_skew, 'LMI','Neuron', 'LMI',
-                        Label1,Label2 , color1='red', color2 = 'mediumpurple')
+                        Label1,Label2,svg, color1='red', color2 = 'mediumpurple')
 
     not_skew = len(dF)- Num_highSkew
     figure.pie_plot('high skewed percentage', save_direction_skew, Label1,Label2 , Num_highSkew, not_skew)
     if len(skew_variables['normal_df']) > 0:
         figure.general_figure(TIme, pupil, speed, motion, skew_variables['normal_df'], save_direction_skew, "General_skew.png")
         figure.box_plot(skew_variables['Z_mean_rest'], skew_variables['Z_mean_paw'], skew_variables['Z_mean_Running'], skew_variables['Z_mean_AS'], 'Rest', 'paw Movement','AS',
-        'Running', "skew_stage_mean", 'mean', 'z-scored dF/F', save_direction_skew)
+        'Running', "skew_stage_mean", 'mean', 'z-scored dF/F', save_direction_skew,svg)
+    return mean_high_skew, mean_low_skew
 
 
