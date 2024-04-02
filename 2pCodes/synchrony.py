@@ -106,9 +106,7 @@ def plot_data(a, b, save_path, svg, ax=None):
     else:
         ax = ax or plt.gcf()
     a_new = list(np.array(a)[~np.isnan(np.array(a))])
-    print('Removed %s nan values from STTC array' % (len(a) - len(a_new)))
     b_new = list(np.array(b)[~np.isnan(np.array(b))])
-    print('Removed %s nan values from shuffled array' % (len(b) - len(b_new)))
     counts_a, bins_a = np.histogram(a_new, bins=100, density=True)
     center_a = (bins_a[:-1] + bins_a[1:]) / 2.
     counts_b, bins_b = np.histogram(b_new, bins=100, density=True)

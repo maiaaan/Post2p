@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from scipy.stats import pearsonr
 import os.path
 from scipy.ndimage import filters
@@ -9,7 +10,6 @@ import copy
 from scipy.signal.windows import hamming
 from sklearn.linear_model import LinearRegression
 from scipy.signal import convolve
-from tqdm import tqdm
 import bottleneck as bn
 from scipy.ndimage import gaussian_filter1d
 
@@ -81,7 +81,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     positive_dF = []
     if len(valid_neurons)>0:
         for i in tqdm(valid_neurons, desc= 'calculating lag'):
-            correlation = correlate(dF[i], X)
+            correlation = correlate(X, dF[i])
             correlation = correlation.tolist()
             interested_zone = correlation[sstart:eend]
             if speed_corr[i] >= 0:
@@ -130,7 +130,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
 
     #---------------------------------------------------
     mean_posetive_dF = np.mean(positive_dF, 0)
-    positive_correlation_mean = correlate(mean_posetive_dF, X)
+    positive_correlation_mean = correlate(X, mean_posetive_dF)
     positive_correlation_mean = positive_correlation_mean.tolist()
     positive_interested_zone = positive_correlation_mean[sstart:eend]
     max_mean_lag_pos = max(positive_interested_zone)
@@ -164,7 +164,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     plt.close(fig)
     return all_lag, lag_mean_pos
 
-def detect_bad_neuropils(detected_roi,neuropil, F, iscell,direction):
+def detect_bad_neuropils(detected_roi,neuropil, F,iscell ,direction):
     neuropil_F = gaussian_filter1d(neuropil, 10)
     F_F = gaussian_filter1d(F,10)
     chosen_cell3 = [i for i in range(len(neuropil_F)) if np.std(F_F[i])/np.std(neuropil_F[i]) < 1.6]
