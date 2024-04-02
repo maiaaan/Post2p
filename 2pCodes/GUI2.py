@@ -24,6 +24,7 @@ class Ui_MainWindow(object):
         self.tabGeneral.setObjectName("tabGeneral")
         self.tabsetting = QtWidgets.QWidget()
         self.tabsetting.setObjectName("tabsetting")
+
         #----------------------------variables-----------------------------
         self.recording_date = None
         self.upload_metadata = False
@@ -31,6 +32,7 @@ class Ui_MainWindow(object):
         self.first_frame = 0
         self.last_frame= LenData
         self.mouseLine = ""
+        self.directory = ""
         self.mousecode = str
         self.selected_neuron = None
         self.mouse_Genotype = None
@@ -420,12 +422,17 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
+        self.statusbar.setStyleSheet("color: white;")
+        MainWindow.setStatusBar(self.statusbar)
         MainWindow.setStatusBar(self.statusbar)
         self.retranslateUi(MainWindow)
         self.tabGeneral.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def display_text(self, text, color):
+        for item in self.scene4.items():
+            if isinstance(item, QtWidgets.QGraphicsTextItem):
+                    self.scene4.removeItem(item)
         item = QtWidgets.QGraphicsTextItem(text)
         item.setDefaultTextColor(QtGui.QColor(color))
         self.scene4.addItem(item)
@@ -444,7 +451,42 @@ class Ui_MainWindow(object):
         self.sensor = self.comboBox_sensor.currentText()
         self.sex = self.comboBox_sex.currentText()
         self.recording_date = self.dateEdit.date().toString("yyyy-MM-dd")
+        if not self.mouseLine.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter mouse line or select a metadata file!', 4000)
+        if not self.mousecode.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter mouse code or select a metadata file!', 4000)
+        if not self.session.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter recording session or select a metadata file!', 4000)
+        if self.comboBox_sensor.currentText() == "Sensor" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter Sensor type or select a metadata file!', 4000)
+        if self.comboBox_sex.currentText() == "Sex" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid sex or select a metadata file', 4000)
+        if self.comboBox_screen.currentText() == "Screen state" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid screen state or select a metadata file', 4000)
+        if self.comboBox_Genotype.currentText() == "Genotype" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid Genotype or select a metadata file', 4000)
+        if self.comboBox_N_type.currentText() == "Neuronal Type" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid Neuronal Type or select a metadata file', 4000)
+        if self.directory == "":
+                self.show_warning_popup("Do you want to analyze data without final compiling?")
         return self.recording_date
+
+
+    def show_warning_popup(self, message):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setText(message)
+        msg.setWindowTitle("Warning")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        msg.buttonClicked.connect(self.handle_warning_response)
+        msg.exec_()
+    def handle_warning_response(self, button):
+        if button.text() == "&Yes":
+            self.display_text("Data will not be added to compile", "white")
+            self.directory = "No_compile"
+        elif button.text() == "&No":
+                pass
+
 
     def get_setting_input(self):
         self.F0_method = self.comboBox_F0_method.currentText()
@@ -575,7 +617,7 @@ class Ui_MainWindow(object):
         self.comboBox_Genotype.setItemText(1, _translate("MainWindow", "Knockout"))
         self.comboBox_Genotype.setItemText(2, _translate("MainWindow", "wild"))
         self.comboBox_Genotype.setItemText(3, _translate("MainWindow", "Injected"))
-        self.comboBox_N_type.setItemText(0, _translate("MainWindow", "Neuronl Type"))
+        self.comboBox_N_type.setItemText(0, _translate("MainWindow", "Neuronal Type"))
         self.comboBox_N_type.setItemText(1, _translate("MainWindow", "PYR"))
         self.comboBox_N_type.setItemText(2, _translate("MainWindow", "VIP"))
         self.comboBox_N_type.setItemText(3, _translate("MainWindow", "SST"))
@@ -591,17 +633,18 @@ class Ui_MainWindow(object):
         self.pushButton_OK.setText(_translate("MainWindow", "OK"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.General), _translate("MainWindow", "General"))
 
-
-# class MyWindow(QtWidgets.QMainWindow):
-#     def __init__(self, image_file, data_file):
-#         super().__init__()
-#         self.ui = Ui_MainWindow()
-#         self.ui.setupUi(self,figure_path, LenData)
-# if __name__ == "__main__":
-#     import sys
-#     app = QtWidgets.QApplication(sys.argv)
-#     data_path = LenData
-#     figure_path = figure_path
-#     window = MyWindow(figure_path, LenData)
-#     window.show()
-#     app.exec_()
+LenData = 900
+figure_path = r"F:\VIP_CB1 td Tom\VIP_2_FOD_male\TSeries-01172023-Vip2-003\2test_Results2.7_TSeries-01172023-Vip2-003\Figures"
+class MyWindow(QtWidgets.QMainWindow):
+    def __init__(self, image_file, data_file):
+        super().__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self,figure_path, LenData)
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    data_path = LenData
+    figure_path = figure_path
+    window = MyWindow(figure_path, LenData)
+    window.show()
+    app.exec_()
