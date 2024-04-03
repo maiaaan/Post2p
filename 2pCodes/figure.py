@@ -5,6 +5,25 @@ import os
 from scipy import signal
 import pandas as pd
 import plotly.express as px
+
+def Time_pie(whisking_T, Running_T, Rest_T, Only_paw, general_timing,save_direction,svg):
+    not_used = general_timing -(whisking_T + Running_T + Rest_T + Only_paw)
+    labels = ["Resting/no whisking","Resting/whisking", "Running/whisking","Paw movment/whisking",  "not analyzed"]
+    fig = plt.figure(figsize=(10, 5))
+    sizes = [Rest_T,whisking_T , Running_T , Only_paw, not_used]
+    colors = ['lightpink','plum','steelblue','chocolate','lightslategrey']
+    explode = (0.05, 0.05, 0.05, 0.05, 0.05)
+    plt.pie(sizes,labels=labels,
+            colors=colors, autopct='%1.1f%%', labeldistance=None, explode = explode)
+    plt.legend(labels = labels, loc='center left', bbox_to_anchor=(0.8, 0.3), frameon=False)
+    plt.axis('equal')
+    plt.title("Motion timing")
+    if svg == True:
+        svg_name = "Motion_time.svg"
+        save_direction_svg = os.path.join(save_direction, svg_name)
+        fig.savefig(save_direction_svg)
+    functions.save_fig("Motion_time.png",save_direction,fig)
+
 def general_figure(TIme, normal_pupil,speed, normal_motion,dF, save_direction_figure,label):
     fig = plt.figure(figsize=(36, 20))
     y2 = dF[-1]
