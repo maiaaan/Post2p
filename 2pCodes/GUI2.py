@@ -633,18 +633,3 @@ class Ui_MainWindow(object):
         self.pushButton_OK.setText(_translate("MainWindow", "OK"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.General), _translate("MainWindow", "General"))
 
-LenData = 900
-figure_path = r"F:\VIP_CB1 td Tom\VIP_2_FOD_male\TSeries-01172023-Vip2-003\2test_Results2.7_TSeries-01172023-Vip2-003\Figures"
-class MyWindow(QtWidgets.QMainWindow):
-    def __init__(self, image_file, data_file):
-        super().__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self,figure_path, LenData)
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    data_path = LenData
-    figure_path = figure_path
-    window = MyWindow(figure_path, LenData)
-    window.show()
-    app.exec_()
