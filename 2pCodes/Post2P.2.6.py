@@ -69,7 +69,7 @@ if __name__ == "__main__":
     window = MyWindow(save_direction_figure, len_data)
     window.show()
     app.exec_()
-#---------------------------Get data from GUI-------------------------------
+#-----------------------------Get data from GUI---------------------------------
 upload_metadata = window.ui.upload_metadata
 generate_metadata = window.ui.get_generate_metadata()
 if upload_metadata:
@@ -108,7 +108,6 @@ else:
         with open(SaveMetadata, 'w') as file:
             file.write(json.dumps(metadata, indent=4))
 
-
 compile_directory = window.ui.directory
 DO_MOTION = window.ui.get_face_state()
 Do_pupil = window.ui.get_pupil_state()
@@ -133,12 +132,12 @@ min_Run_win = window.ui.min_Run_win
 min_AS_win = window.ui.min_AS_win
 min_Rest_win = window.ui.min_Rest_win
 min_PM_win = window.ui.min_PM_win
-#-----------------------Find blinking frames blinking -----------------------
+#-------------------------Find blinking frames blinking -------------------------
 ALL_ID = np.arange(0, len_data)
 if remove_blink:
     ALL_ID = functions.detect_blinking(pupil,ALL_ID,window =4)
 new_id = [i for i in ALL_ID if st_FA <= i < end_FA]
-#----------------Removeing bad frames neural and behavioral traces------------
+#----------------Removeing bad frames neural and behavioral traces---------------
 F = F[:, new_id]
 motion = motion[new_id]
 pupil = pupil[new_id]
@@ -322,12 +321,14 @@ valid_MI.create_dataset('Running_MI', data = Run_MI_valid1)
 functions.creat_H5_dataset(valid_Zscored_Ca,[mean_Running_dF_valid, mean_F_rest_speed_valid, mean_dF_NABMA_valid]
                            ,['Running', 'Rest', 'paw_movement'])
 #-----------------------------------------------------
-#double_check
+general_timing = TIme[-1] - TIme[0]
 RUN_TIME = motion_state.state_duration(Real_Time_Running)
 REST_TIME = motion_state.state_duration(Real_Time_rest_window)
 only_paw_Time = motion_state.state_duration(Real_time_NABMA)
 AS_TIME = motion_state.state_duration(Real_time_AS)
-Run_percentage = (RUN_TIME/TIme[-1]) * 100
+Run_percentage = (RUN_TIME/general_timing) * 100
+figure.Time_pie(AS_TIME, RUN_TIME, REST_TIME, only_paw_Time, general_timing,save_direction_figure,svg)
+
 if DO_MOTION:
     valid_neurons_face, out_neurons_face = functions.permutation(dF, filtered_motion,"motion", save_direction_permutation,permutation_sample)
     functions.creat_H5_dataset(ROIs_group, [valid_neurons_face,out_neurons_face], ['Valid_Face','out_Face'])
