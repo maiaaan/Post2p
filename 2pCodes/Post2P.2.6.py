@@ -272,7 +272,7 @@ dF_speed_correlation_sorted = [dF for speed_corr, dF in sorted(zip(speed_corr, d
 Normal_dF_speed_correlation_sorted = functions.Normal_df(dF_speed_correlation_sorted)
 #-------------------------------------------------------------Speed lag--------------------------------------
 if Do_lag :
-    valid_speed_lag, lag_mean_dF_speed = functions.lag2(TIme,valid_neurons_speed,save_direction0_lag,dF,speed,"speed",speed_corr)
+    valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme,valid_neurons_speed,save_direction0_lag,dF,speed,"speed",speed_corr)
 
     Sub_processd_lag = processd_group.create_group('lag')
     functions.creat_H5_dataset(Sub_processd_lag,[valid_speed_lag, lag_mean_dF_speed],['speed_lag_valid_ROIs','lag_mean_dF_speed'])
@@ -354,7 +354,7 @@ if DO_MOTION:
     Whisking_percentage = (Whisking_TIME / TIme[-1])*100
     #--------------------------------------------------------------------------
     if Do_lag:
-        valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag2(TIme, valid_neurons_face,
+        valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag(TIme, valid_neurons_face,
                                 save_direction0_lag, dF,motion, "face motion", face_corr)
         functions.creat_H5_dataset(Sub_processd_lag, [valid_daceMo_lag, lag_mean_dF_facemotion],
                                    ['FaceMotion_lag_valid_ROIs', 'lag_mean_dF_facemotion'])
