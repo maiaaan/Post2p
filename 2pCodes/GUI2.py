@@ -3,7 +3,9 @@ from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QFileDialog
 import os
+
 class Ui_MainWindow(object):
+    
     def setupUi(self, MainWindow, figure_path, LenData):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(580, 775)
@@ -12,9 +14,10 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_4 = QtWidgets.QGridLayout(self.centralwidget)
         self.gridLayout_4.setObjectName("gridLayout_4")
+
         self.tabGeneral = QtWidgets.QTabWidget(self.centralwidget)
         self.tabGeneral.setStyleSheet("background-color: rgb(27, 27, 27);\n"
-"color: rgb(177, 177, 177);")
+                                      "color: rgb(177, 177, 177);")
         self.tabGeneral.setTabPosition(QtWidgets.QTabWidget.North)
         self.tabGeneral.setTabShape(QtWidgets.QTabWidget.Triangular)
         self.tabGeneral.setUsesScrollButtons(True)
@@ -22,6 +25,7 @@ class Ui_MainWindow(object):
         self.tabGeneral.setTabsClosable(False)
         self.tabGeneral.setTabBarAutoHide(False)
         self.tabGeneral.setObjectName("tabGeneral")
+        
         self.tabsetting = QtWidgets.QWidget()
         self.tabsetting.setObjectName("tabsetting")
 
@@ -55,11 +59,18 @@ class Ui_MainWindow(object):
         self.mean_F_image = os.path.join(figure_path, "raw_mean_F.png")
         self.Pupil_image = os.path.join(figure_path, "pupil.png")
         self.facemotion_image = os.path.join(figure_path, "raw_face_motion.png")
-        # ---------------------------------------------------------------
+
+        #---------------------------- Display variables------------------------
+        self.font = QtGui.QFont()
+        self.font.setPointSize(9)
+        
+        #___________________________SETTING TAB______________________________
+        
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.tabsetting)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout()
         self.verticalLayout_6.setObjectName("verticalLayout_6")
+        
         self.label_7 = QtWidgets.QLabel(self.tabsetting)
         font = QtGui.QFont()
         font.setPointSize(14)
@@ -190,12 +201,10 @@ class Ui_MainWindow(object):
         self.SpinBox_alpha_factor.setObjectName("SpinBox_alpha_factor")
         self.SpinBox_alpha_factor.setValue(self.alpha)
         self.verticalLayout_5.addWidget(self.SpinBox_alpha_factor)
-        self.generate_figure_checkBox = QtWidgets.QCheckBox(self.tabsetting)
-        self.generate_figure_checkBox.setObjectName("generate_figure_checkBox")
-        self.verticalLayout_5.addWidget(self.generate_figure_checkBox)
-        self.Convolve_checkBox = QtWidgets.QCheckBox(self.tabsetting)
-        self.Convolve_checkBox.setObjectName("Convolve_checkBox")
-        self.verticalLayout_5.addWidget(self.Convolve_checkBox)
+
+        self.generate_figure_checkBox = self.init_checkbox("generate_figure_checkBox", self.tabsetting, self.verticalLayout_5)
+        self.Convolve_checkBox = self.init_checkbox("Convolve_checkBox", self.tabsetting, self.verticalLayout_5)
+
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem)
         #------------------------------------------
@@ -209,214 +218,105 @@ class Ui_MainWindow(object):
         self.savesetting_pushButton.clicked.connect(self.get_setting_input)
         self.verticalLayout_5.addWidget(self.savesetting_pushButton)
         self.verticalLayout_2.addLayout(self.verticalLayout_5)
+
+        #___________________________GENERAL TAB______________________________
+        
         self.tabGeneral.addTab(self.tabsetting, "")
         self.General = QtWidgets.QWidget()
         self.General.setObjectName("General")
+        
+        #----------------------------------------
         self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.General)
         self.verticalLayout_7.setObjectName("verticalLayout_7")
+
         self.verticalLayout_4 = QtWidgets.QVBoxLayout()
         self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.label_mean_F = QtWidgets.QLabel(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.label_mean_F.setFont(font)
-        self.label_mean_F.setObjectName("label_mean_F")
-        self.verticalLayout_4.addWidget(self.label_mean_F)
-        self.graphicsView_mean_F = QtWidgets.QGraphicsView(self.General)
-        self.graphicsView_mean_F.setObjectName("graphicsView_mean_F")
-        self.verticalLayout_4.addWidget(self.graphicsView_mean_F)
-        self.label_pupil = QtWidgets.QLabel(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.label_pupil.setFont(font)
-        self.label_pupil.setObjectName("label_pupil")
-        self.verticalLayout_4.addWidget(self.label_pupil)
-        self.graphicsView_pupil = QtWidgets.QGraphicsView(self.General)
-        self.graphicsView_pupil.setObjectName("graphicsView_pupil")
-        self.verticalLayout_4.addWidget(self.graphicsView_pupil)
-        self.label_facemotion = QtWidgets.QLabel(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.label_facemotion.setFont(font)
-        self.label_facemotion.setObjectName("label_facemotion")
-        self.verticalLayout_4.addWidget(self.label_facemotion)
-        self.graphicsView_facemotion = QtWidgets.QGraphicsView(self.General)
-        self.graphicsView_facemotion.setObjectName("graphicsView_facemotion")
-        self.verticalLayout_4.addWidget(self.graphicsView_facemotion)
         self.verticalLayout_7.addLayout(self.verticalLayout_4)
+        
+        self.label_mean_F, self.graphicsView_mean_F = self.init_traces("label_mean_F", "graphicsView_mean_F", self.mean_F_image, self.verticalLayout_4)
+        self.label_pupil, self.graphicsView_pupil = self.init_traces("label_pupil", "graphicsView_pupil", self.Pupil_image, self.verticalLayout_4)
+        self.label_facemotion, self.graphicsView_facemotion = self.init_traces("label_facemotion", "graphicsView_facemotion", self.facemotion_image, self.verticalLayout_4)
+
+        #________________________________________
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        #-----------------------------------------------
-        pixmap = QPixmap(self.facemotion_image)
-        scene = QGraphicsScene(self.graphicsView_facemotion)
-        item = QGraphicsPixmapItem(pixmap)
-        scene.addItem(item)
-        self.graphicsView_facemotion.setScene(scene)
-        #-----------------------------------------------
-        pixmap2 = QPixmap(self.Pupil_image)
-        scene2 = QGraphicsScene(self.graphicsView_pupil)
-        item2 = QGraphicsPixmapItem(pixmap2)
-        scene2.addItem(item2)
-        self.graphicsView_pupil.setScene(scene2)
-        #----------------------------------------------
-        pixmap3 = QPixmap(self.mean_F_image)
-        scene3 = QGraphicsScene(self.graphicsView_mean_F)
-        item3 = QGraphicsPixmapItem(pixmap3)
-        scene3.addItem(item3)
-        self.graphicsView_mean_F.setScene(scene3)
-        #_____________________Test________________________
-        self.checkBox_lag_analyse = QtWidgets.QCheckBox(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.checkBox_lag_analyse.setFont(font)
-        self.checkBox_lag_analyse.setObjectName("checkBox_lag_analyse")
-        self.verticalLayout.addWidget(self.checkBox_lag_analyse)
-        self.checkBox_generate_metadata = QtWidgets.QCheckBox(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.checkBox_generate_metadata.setFont(font)
-        self.checkBox_generate_metadata.setObjectName("checkBox_generate_metadata")
-        self.verticalLayout.addWidget(self.checkBox_generate_metadata)
-        self.checkBox_skew_analyse = QtWidgets.QCheckBox(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.checkBox_skew_analyse.setFont(font)
-        self.checkBox_skew_analyse.setObjectName("checkBox_skew_analyse")
-        self.verticalLayout.addWidget(self.checkBox_skew_analyse)
-        self.checkBox_pupil_analyse = QtWidgets.QCheckBox(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.checkBox_pupil_analyse.setFont(font)
-        self.checkBox_pupil_analyse.setObjectName("checkBox_pupil_analyse")
-        self.verticalLayout.addWidget(self.checkBox_pupil_analyse)
-        self.checkBox_face_analyse = QtWidgets.QCheckBox(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.checkBox_face_analyse.setFont(font)
-        self.checkBox_face_analyse.setObjectName("checkBox_face_analyse")
-        self.verticalLayout.addWidget(self.checkBox_face_analyse)
-        self.checkBox_remove_blinking = QtWidgets.QCheckBox(self.General)
-        self.checkBox_remove_blinking.setObjectName("checkBox_remove_blinking")
-        self.verticalLayout.addWidget(self.checkBox_remove_blinking)
         self.horizontalLayout_2.addLayout(self.verticalLayout)
+
+        self.checkBox_lag_analyse = self.init_checkbox("checkBox_lag_analyse", self.General, self.verticalLayout)
+        self.checkBox_skew_analyse = self.init_checkbox("checkBox_skew_analyse", self.General, self.verticalLayout)
+        self.checkBox_pupil_analyse = self.init_checkbox("checkBox_pupil_analyse", self.General, self.verticalLayout)
+        self.checkBox_face_analyse = self.init_checkbox("checkBox_face_analyse", self.General, self.verticalLayout)
+        self.checkBox_remove_blinking = self.init_checkbox("checkBox_remove_blinking", self.General, self.verticalLayout)
+        self.checkBox_generate_metadata = self.init_checkbox("checkBox_generate_metadata", self.General, self.verticalLayout)
+
+        #----------------------------------------
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem1)
+
         self.gridLayout_3 = QtWidgets.QGridLayout()
         self.gridLayout_3.setHorizontalSpacing(8)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.comboBox_sensor = QtWidgets.QComboBox(self.General)
-        self.comboBox_sensor.setObjectName("comboBox_sensor")
-        self.comboBox_sensor.addItem("")
-        self.comboBox_sensor.addItem("")
-        self.comboBox_sensor.addItem("")
-        self.comboBox_sensor.addItem("")
+        self.horizontalLayout_2.addLayout(self.gridLayout_3)
+
+        self.comboBox_Genotype = self.init_combobox("comboBox", self.General, 3)
+        self.gridLayout_3.addWidget(self.comboBox_Genotype, 0, 0, 1, 1)
+        self.comboBox_N_type = self.init_combobox("comboBox_N_type", self.General, 6)
+        self.gridLayout_3.addWidget(self.comboBox_N_type, 0, 1, 1, 1)
+        self.comboBox_sensor = self.init_combobox("comboBox_sensor", self.General, 3)
         self.gridLayout_3.addWidget(self.comboBox_sensor, 1, 0, 1, 1)
-        self.comboBox_sex = QtWidgets.QComboBox(self.General)
-        self.comboBox_sex.setObjectName("comboBox_sex")
-        self.comboBox_sex.addItem("")
-        self.comboBox_sex.addItem("")
-        self.comboBox_sex.addItem("")
+        self.comboBox_screen = self.init_combobox("comboBox_screen", self.General, 3)
+        self.gridLayout_3.addWidget(self.comboBox_screen, 1, 1, 1, 1)
+        self.comboBox_sex = self.init_combobox("comboBox_sex", self.General, 2)
         self.gridLayout_3.addWidget(self.comboBox_sex, 2, 0, 1, 1)
-        #------------------------------------
         self.dateEdit = QtWidgets.QDateEdit(self.General)
         self.dateEdit.setObjectName("dateEdit")
         self.gridLayout_3.addWidget(self.dateEdit, 2, 1, 1, 1)
-        #------------------------------------
-        self.comboBox_screen = QtWidgets.QComboBox(self.General)
-        self.comboBox_screen.setObjectName("comboBox_screen")
-        self.comboBox_screen.addItem("")
-        self.comboBox_screen.addItem("")
-        self.comboBox_screen.addItem("")
-        self.comboBox_screen.addItem("")
-        self.gridLayout_3.addWidget(self.comboBox_screen, 1, 1, 1, 1)
-        self.comboBox_Genotype = QtWidgets.QComboBox(self.General)
-        self.comboBox_Genotype.setObjectName("comboBox")
-        self.comboBox_Genotype.addItem("")
-        self.comboBox_Genotype.addItem("")
-        self.comboBox_Genotype.addItem("")
-        self.comboBox_Genotype.addItem("")
-        self.gridLayout_3.addWidget(self.comboBox_Genotype, 0, 0, 1, 1)
-        self.comboBox_N_type = QtWidgets.QComboBox(self.General)
-        self.comboBox_N_type.setObjectName("comboBox_N_type")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.comboBox_N_type.addItem("")
-        self.gridLayout_3.addWidget(self.comboBox_N_type, 0, 1, 1, 1)
-        self.horizontalLayout_2.addLayout(self.gridLayout_3)
+
+        #----------------------------------------
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem2)
+
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.label = QtWidgets.QLabel(self.General)
-        self.label.setObjectName("label")
-        self.verticalLayout_3.addWidget(self.label)
-        self.lineEdit_mouse_line = QtWidgets.QLineEdit(self.General)
-        self.lineEdit_mouse_line.setObjectName("lineEdit")
-        self.verticalLayout_3.addWidget(self.lineEdit_mouse_line)
-        self.label_mouse_code = QtWidgets.QLabel(self.General)
-        self.label_mouse_code.setObjectName("label_mouse_code")
-        self.verticalLayout_3.addWidget(self.label_mouse_code)
-        self.lineEdit_mouse_code = QtWidgets.QLineEdit(self.General)
-        self.lineEdit_mouse_code.setObjectName("lineEdit_mouse_code")
-        self.verticalLayout_3.addWidget(self.lineEdit_mouse_code)
-        #___________________________________
-        self.label_session = QtWidgets.QLabel(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.label_session.setFont(font)
-        self.label_session.setObjectName("label session")
-        self.verticalLayout_3.addWidget(self.label_session)
-        self.lineEdit_session = QtWidgets.QLineEdit(self.General)
-        self.lineEdit_session.setObjectName("lineEdit_session")
-        self.verticalLayout_3.addWidget(self.lineEdit_session)
-        #_____________________________________
-
-        self.label_first_frame = QtWidgets.QLabel(self.General)
-        self.label_first_frame.setObjectName("label_first_frame")
-        self.verticalLayout_3.addWidget(self.label_first_frame)
-        self.lineEdit_first_frame = QtWidgets.QLineEdit(self.General)
-        self.lineEdit_first_frame.setObjectName("lineEdit_first_frame")
-        self.verticalLayout_3.addWidget(self.lineEdit_first_frame)
-
-        self.label_last_frame = QtWidgets.QLabel(self.General)
-        font = QtGui.QFont()
-        font.setPointSize(9)
-        self.label_last_frame.setFont(font)
-        self.label_last_frame.setObjectName("label_last_frame")
-        self.verticalLayout_3.addWidget(self.label_last_frame)
-
-        self.lineEdit_last_frame = QtWidgets.QLineEdit(self.General)
-        self.lineEdit_last_frame.setText("")
-        self.lineEdit_last_frame.setObjectName("lineEdit_last_frame")
-        self.verticalLayout_3.addWidget(self.lineEdit_last_frame)
         self.horizontalLayout_2.addLayout(self.verticalLayout_3)
+        
+        self.label_mouse_line, self.lineEdit_mouse_line = self.init_lineEdit("label", "lineEdit", self.General, self.verticalLayout_3)
+        self.label_mouse_code, self.lineEdit_mouse_code = self.init_lineEdit("label_mouse_code", "lineEdit_mouse_code", self.General, self.verticalLayout_3)  
+        self.label_session, self.lineEdit_session = self.init_lineEdit("label session", "lineEdit_session", self.General, self.verticalLayout_3)
+        self.label_first_frame, self.lineEdit_first_frame = self.init_lineEdit("label_first_frame", "lineEdit_first_frame", self.General, self.verticalLayout_3)
+        self.label_last_frame, self.lineEdit_last_frame = self.init_lineEdit("label_last_frame", "lineEdit_last_frame", self.General, self.verticalLayout_3)  
+
         self.verticalLayout_7.addLayout(self.horizontalLayout_2)
+
+        #_________________________________
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setContentsMargins(2, -1, -1, -1)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.verticalLayout_7.addLayout(self.horizontalLayout)
+
         self.graphicsView_3 = QtWidgets.QGraphicsView(self.General)
         self.graphicsView_3.setObjectName("graphicsView_3")
         self.scene4 = QtWidgets.QGraphicsScene()
         self.graphicsView_3.setScene(self.scene4)
         self.horizontalLayout.addWidget(self.graphicsView_3)
         self.graphicsView_3.setFixedSize(600, 25)
-        #_________________________________
+
         self.pushButton_co_directory = QtWidgets.QPushButton(self.General)
         self.pushButton_co_directory.setObjectName("pushButton_co_directory")
         self.pushButton_co_directory.clicked.connect(self.open_directory)
         self.horizontalLayout.addWidget(self.pushButton_co_directory)
         self.horizontalLayout.setStretch(0, 3)
-        self.verticalLayout_7.addLayout(self.horizontalLayout)
+
         self.pushButton_OK = QtWidgets.QPushButton(self.General)
         self.pushButton_OK.setObjectName("pushButton_OK")
         self.verticalLayout_7.addWidget(self.pushButton_OK)
         self.pushButton_OK.clicked.connect(self.get_input)
+
+        #_________________________________
+
         self.tabGeneral.addTab(self.General, "")
         self.gridLayout_4.addWidget(self.tabGeneral, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -428,6 +328,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.tabGeneral.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
 
     def display_text(self, text, color):
         for item in self.scene4.items():
@@ -506,7 +407,7 @@ class Ui_MainWindow(object):
         self.upload_metadata = True
         options = QFileDialog.Options()
         options |= QFileDialog.ShowDirsOnly
-        self.meta_data_directory = QFileDialog.getExistingDirectory(None, "Select metadata file", options=options)
+        self.meta_data_directory = QFileDialog.getExistingDirectory(None, "Select metadata folder", options=options)
     def generate_file(self):
         metadata = {'Mouse_line': self.mouseLine,
                    'Mouse_Code': self.mousecode,
@@ -526,7 +427,6 @@ class Ui_MainWindow(object):
         self.directory = QFileDialog.getExistingDirectory(None, "Select Directory", options=options)
         if self.directory:
             self.display_text(self.directory, "white")
-
 
 
     def get_face_state(self):
@@ -550,6 +450,45 @@ class Ui_MainWindow(object):
 
     def get_generate_svg_state(self):
         return self.generate_figure_checkBox.isChecked()
+    
+
+    def init_lineEdit(self, name_label: str, name_lineedit: str, tab, vlayout):
+          label = QtWidgets.QLabel(tab)
+          label.setObjectName(name_label)
+          vlayout.addWidget(label)
+          lineedit = QtWidgets.QLineEdit(tab)
+          lineedit.setObjectName(name_lineedit)
+          vlayout.addWidget(lineedit)
+          return label, lineedit
+        
+    def init_checkbox(self, name: str, tab, vlayout):
+        checkbox = QtWidgets.QCheckBox(tab)
+        checkbox.setFont(self.font)
+        checkbox.setObjectName(name)
+        vlayout.addWidget(checkbox)
+        return checkbox
+    
+    def init_combobox(self, name: str, tab, nb_choice: int):
+        combobox = QtWidgets.QComboBox(tab)
+        combobox.setObjectName(name)
+        for i in range(nb_choice+1):
+                combobox.addItem("")
+        return combobox
+    
+    def init_traces(self, name_label: str, name_graph: str, path, vlayout):
+        label = QtWidgets.QLabel(self.General)
+        label.setFont(self.font)
+        label.setObjectName(name_label)
+        vlayout.addWidget(label)
+        graph = QtWidgets.QGraphicsView(self.General)
+        graph.setObjectName(name_graph)
+        vlayout.addWidget(graph)
+        pixmap = QPixmap(path)
+        scene = QGraphicsScene(graph)
+        item = QGraphicsPixmapItem(pixmap)
+        scene.addItem(item)
+        graph.setScene(scene)
+        return label, graph
 
 
     def retranslateUi(self, MainWindow):
@@ -624,7 +563,7 @@ class Ui_MainWindow(object):
         self.comboBox_N_type.setItemText(4, _translate("MainWindow", "NDNF"))
         self.comboBox_N_type.setItemText(5, _translate("MainWindow", "PV"))
         self.comboBox_N_type.setItemText(6, _translate("MainWindow", "SNCG"))
-        self.label.setText(_translate("MainWindow", "Mouse Line"))
+        self.label_mouse_line.setText(_translate("MainWindow", "Mouse Line"))
         self.label_mouse_code.setText(_translate("MainWindow", "Mouse Code"))
         self.label_first_frame.setText(_translate("MainWindow", "First frame"))
         self.label_last_frame.setText(_translate("MainWindow", "Last frame"))
@@ -632,4 +571,3 @@ class Ui_MainWindow(object):
         self.pushButton_co_directory.setText(_translate("MainWindow", "compile directory"))
         self.pushButton_OK.setText(_translate("MainWindow", "OK"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.General), _translate("MainWindow", "General"))
-
