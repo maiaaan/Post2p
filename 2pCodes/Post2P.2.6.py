@@ -6,7 +6,7 @@ from PyQt5 import QtWidgets
 import glob
 import json
 import os.path
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr
 from scipy.ndimage import gaussian_filter1d
 import datetime
 from scipy.stats import skew
@@ -72,6 +72,7 @@ if __name__ == "__main__":
 #-----------------------------Get data from GUI---------------------------------
 upload_metadata = window.ui.upload_metadata
 generate_metadata = window.ui.get_generate_metadata()
+
 if upload_metadata:
     meta_data_directory = window.ui.meta_data_directory
     print(meta_data_directory)
