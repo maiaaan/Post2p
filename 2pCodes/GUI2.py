@@ -158,15 +158,15 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.addItem(spacerItem)
         self.verticalLayout_2.addLayout(self.verticalLayout_5)
 
-        self.Metadata_push = QtWidgets.QPushButton(self.tabsetting)
-        self.Metadata_push.setObjectName("pushButton")
-        self.Metadata_push.clicked.connect(self.get_Metadata)
-        self.verticalLayout_5.addWidget(self.Metadata_push)
-
         self.savesetting_pushButton = QtWidgets.QPushButton(self.tabsetting)
         self.savesetting_pushButton.setObjectName("pushButton")
         self.savesetting_pushButton.clicked.connect(self.get_setting_input)
         self.verticalLayout_5.addWidget(self.savesetting_pushButton)
+
+        self.Metadata_push = QtWidgets.QPushButton(self.tabsetting)
+        self.Metadata_push.setObjectName("pushButton")
+        self.Metadata_push.clicked.connect(self.get_Metadata)
+        self.verticalLayout_5.addWidget(self.Metadata_push)
 
         #___________________________GENERAL TAB______________________________
         
@@ -221,6 +221,7 @@ class Ui_MainWindow(object):
         self.gridLayout_3.addWidget(self.comboBox_sex, 2, 0, 1, 1)
         self.dateEdit = QtWidgets.QDateEdit(self.General)
         self.dateEdit.setObjectName("dateEdit")
+        self.dateEdit.setFont(QtGui.QFont("DejaVu Sans", 10))
         self.gridLayout_3.addWidget(self.dateEdit, 2, 1, 1, 1)
 
         #----------------------------------------
@@ -279,7 +280,6 @@ class Ui_MainWindow(object):
         self.tabGeneral.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-
     def display_text(self, text, color):
         for item in self.scene4.items():
             if isinstance(item, QtWidgets.QGraphicsTextItem):
@@ -322,7 +322,6 @@ class Ui_MainWindow(object):
                 self.show_warning_popup("Do you want to analyze data without final compiling?")
         return self.recording_date
 
-
     def show_warning_popup(self, message):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Warning)
@@ -331,13 +330,13 @@ class Ui_MainWindow(object):
         msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
         msg.buttonClicked.connect(self.handle_warning_response)
         msg.exec_()
+
     def handle_warning_response(self, button):
         if button.text() == "&Yes":
             self.display_text("Data will not be added to compile", "white")
             self.directory = "No_compile"
         elif button.text() == "&No":
                 pass
-
 
     def get_setting_input(self):
         self.F0_method = self.comboBox_F0_method.currentText()
@@ -380,7 +379,6 @@ class Ui_MainWindow(object):
         if self.directory:
             self.display_text(self.directory, "white")
 
-
     def get_face_state(self):
         return self.checkBox_face_analyse.isChecked()
 
@@ -389,6 +387,7 @@ class Ui_MainWindow(object):
 
     def get_generate_metadata(self):
             return self.checkBox_generate_metadata.isChecked()
+
     def get_lag_state(self):
             return self.checkBox_lag_analyse.isChecked()
 
@@ -397,13 +396,14 @@ class Ui_MainWindow(object):
 
     def get_blink_state(self):
             return self.checkBox_remove_blinking.isChecked()
+
     def get_convolve_state(self):
         return self.Convolve_checkBox.isChecked()
 
     def get_generate_svg_state(self):
         return self.generate_figure_checkBox.isChecked()
     
-
+#Init widgets ensemble
     def init_lineEdit(self, name_label: str, name_lineedit: str, tab, vlayout=None, font=QtGui.QFont("DejaVu Sans", 10)):
         label = QtWidgets.QLabel(tab)
         label.setObjectName(name_label)
@@ -466,7 +466,7 @@ class Ui_MainWindow(object):
         graph.setScene(scene)
         return label, graph
 
-
+#Manage texts display
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
