@@ -7,6 +7,7 @@ import os
 class Ui_MainWindow(object):
     
     def setupUi(self, MainWindow, figure_path, LenData):
+
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(580, 775)
         MainWindow.setStyleSheet("background-color: rgb(27, 27, 27);")
@@ -25,9 +26,6 @@ class Ui_MainWindow(object):
         self.tabGeneral.setTabsClosable(False)
         self.tabGeneral.setTabBarAutoHide(False)
         self.tabGeneral.setObjectName("tabGeneral")
-        
-        self.tabsetting = QtWidgets.QWidget()
-        self.tabsetting.setObjectName("tabsetting")
 
         #----------------------------variables-----------------------------
         self.recording_date = None
@@ -60,17 +58,20 @@ class Ui_MainWindow(object):
         self.Pupil_image = os.path.join(figure_path, "pupil.png")
         self.facemotion_image = os.path.join(figure_path, "raw_face_motion.png")
 
-        #---------------------------- Display variables------------------------
-        self.font = QtGui.QFont()
-        self.font.setPointSize(9)
+        #-------------------------- Display variables------------------------
+        self.font = QtGui.QFont("DejaVu Sans", 9)
         
         #___________________________SETTING TAB______________________________
         
+        self.tabsetting = QtWidgets.QWidget()
+        self.tabsetting.setObjectName("tabsetting")
+
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.tabsetting)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout()
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        
+
+        #Subtitle
         self.label_7 = QtWidgets.QLabel(self.tabsetting)
         font = QtGui.QFont()
         font.setPointSize(14)
@@ -79,149 +80,96 @@ class Ui_MainWindow(object):
         self.label_7.setAlignment(QtCore.Qt.AlignCenter)
         self.label_7.setObjectName("label_7")
         self.verticalLayout_6.addWidget(self.label_7)
+
+        #Line
         self.line = QtWidgets.QFrame(self.tabsetting)
         self.line.setFrameShape(QtWidgets.QFrame.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line.setObjectName("line")
+
+        #_________________________________
+
         self.verticalLayout_6.addWidget(self.line)
         self.verticalLayout_2.addLayout(self.verticalLayout_6)
+
         self.gridLayout_6 = QtWidgets.QGridLayout()
         self.gridLayout_6.setObjectName("gridLayout_6")
-        self.SpinBox_motion_th = QtWidgets.QDoubleSpinBox(self.tabsetting)
-        self.SpinBox_motion_th.setObjectName("SpinBox_motion_th")
-        self.SpinBox_motion_th.setValue(self.motion_th)
-        self.gridLayout_6.addWidget(self.SpinBox_motion_th, 3, 1, 1, 1)
-        self.label_5 = QtWidgets.QLabel(self.tabsetting)
-        self.label_5.setObjectName("label_5")
-        self.gridLayout_6.addWidget(self.label_5, 6, 1, 1, 1)
-        self.label_speed_filter = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_speed_filter.setFont(font)
-        self.label_speed_filter.setObjectName("label_speed_filter")
-        self.gridLayout_6.addWidget(self.label_speed_filter, 2, 0, 1, 1)
-        self.label_motion_filter = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_motion_filter.setFont(font)
-        self.label_motion_filter.setObjectName("label_motion_filter")
-        self.gridLayout_6.addWidget(self.label_motion_filter, 0, 1, 1, 1)
-        self.label_2 = QtWidgets.QLabel(self.tabsetting)
-        self.label_2.setObjectName("label_2")
-        self.gridLayout_6.addWidget(self.label_2, 4, 0, 1, 1)
-        self.spinBox_motion_filter = QtWidgets.QSpinBox(self.tabsetting)
-        self.spinBox_motion_filter.setObjectName("spinBox")
-        self.gridLayout_6.addWidget(self.spinBox_motion_filter, 1, 1, 1, 1)
-        self.spinBox_motion_filter.setValue(self.motion_filter)
-        self.lineEdit_min_AS = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_min_AS.setObjectName("lineEdit_min_AS")
-        self.gridLayout_6.addWidget(self.lineEdit_min_AS, 7, 0, 1, 1)
-        self.lineEdit_min_Run_win = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_min_Run_win.setObjectName("lineEdit_min_Run_win")
-        self.gridLayout_6.addWidget(self.lineEdit_min_Run_win, 5, 0, 1, 1)
-        self.label_3 = QtWidgets.QLabel(self.tabsetting)
-        self.label_3.setObjectName("label_3")
-        self.gridLayout_6.addWidget(self.label_3, 4, 1, 1, 1)
-        self.lineEdit_min_Rest_win = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_min_Rest_win.setObjectName("lineEdit_min_Rest_win")
-        self.gridLayout_6.addWidget(self.lineEdit_min_Rest_win, 5, 1, 1, 1)
-        self.label_motionThr = QtWidgets.QLabel(self.tabsetting)
-        self.label_motionThr.setObjectName("label_motionThr")
-        self.gridLayout_6.addWidget(self.label_motionThr, 2, 1, 1, 1)
-        self.label_filter_kernel = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_filter_kernel.setFont(font)
-        self.label_filter_kernel.setObjectName("label_filter_kernel")
+        self.verticalLayout_2.addLayout(self.gridLayout_6)       
+
+        #Speed filter kernel
+        self.label_filter_kernel, self.lineEdit_speed_filter = self.init_lineEdit("label_filter_kernel", "lineEdit_speed_filter", self.tabsetting)
         self.gridLayout_6.addWidget(self.label_filter_kernel, 0, 0, 1, 1)
-        self.SpinBox_speed_th = QtWidgets.QDoubleSpinBox(self.tabsetting)
-        self.SpinBox_speed_th.setObjectName("SpinBox_speed_th")
-        self.SpinBox_speed_th.setValue(self.speed_threshold)
-        self.gridLayout_6.addWidget(self.SpinBox_speed_th, 3, 0, 1, 1)
-        self.label_4 = QtWidgets.QLabel(self.tabsetting)
-        self.label_4.setObjectName("label_4")
-        self.gridLayout_6.addWidget(self.label_4, 6, 0, 1, 1)
-        self.lineEdit_speed_filter = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_speed_filter.setObjectName("lineEdit_speed_filter")
         self.gridLayout_6.addWidget(self.lineEdit_speed_filter, 1, 0, 1, 1)
-        self.lineEdit_min_PM_win = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_min_PM_win.setObjectName("lineEdit_min_PM_win")
+
+        #Motion filter kernel
+        self.label_motion_filter, self.spinBox_motion_filter = self.init_spinbox("label_motion_filter", "spinBox", self.tabsetting, self.motion_filter)
+        self.gridLayout_6.addWidget(self.label_motion_filter, 0, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.spinBox_motion_filter, 1, 1, 1, 1)
+
+        #Speed threshold
+        self.label_speed_filter, self.SpinBox_speed_th = self.init_spinbox("label_speed_filter", "SpinBox_speed_th", self.tabsetting, self.speed_threshold, double=True)
+        self.gridLayout_6.addWidget(self.label_speed_filter, 2, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.SpinBox_speed_th, 3, 0, 1, 1)
+
+        #motion threshold(*times std)
+        self.label_motionThr, self.SpinBox_motion_th = self.init_spinbox("label_motionThr", "SpinBox_motion_th", self.tabsetting, self.motion_th, double=True)
+        self.gridLayout_6.addWidget(self.label_motionThr, 2, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.SpinBox_motion_th, 3, 1, 1, 1)
+
+        #Minimum Run window(s)
+        self.label_2, self.lineEdit_min_Run_win = self.init_lineEdit("label_2", "lineEdit_min_Run_win", self.tabsetting)
+        self.gridLayout_6.addWidget(self.label_2, 4, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.lineEdit_min_Run_win, 5, 0, 1, 1)
+
+        #Minimum Rest window(s)
+        self.label_3, self.lineEdit_min_Rest_win = self.init_lineEdit("label_3", "lineEdit_min_Rest_win", self.tabsetting)
+        self.gridLayout_6.addWidget(self.label_3, 4, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.lineEdit_min_Rest_win, 5, 1, 1, 1)
+        
+        #Minimum AS window(s)
+        self.label_4, self.lineEdit_min_AS = self.init_lineEdit("label_4", "lineEdit_min_AS", self.tabsetting)
+        self.gridLayout_6.addWidget(self.label_4, 6, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.lineEdit_min_AS, 7, 0, 1, 1)
+
+        #Minimum PM window(s)
+        self.label_5, self.lineEdit_min_PM_win = self.init_lineEdit("label_5", "lineEdit_PM_win", self.tabsetting)
+        self.gridLayout_6.addWidget(self.label_5, 6, 1, 1, 1)
         self.gridLayout_6.addWidget(self.lineEdit_min_PM_win, 7, 1, 1, 1)
-        self.verticalLayout_2.addLayout(self.gridLayout_6)
+
+        #_________________________________
+
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.label_6 = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_6.setFont(font)
-        self.label_6.setObjectName("label_6")
-        self.verticalLayout_5.addWidget(self.label_6)
-        self.SpinBox_skew = QtWidgets.QDoubleSpinBox(self.tabsetting)
-        self.SpinBox_skew.setObjectName("SpinBox_skew")
-        self.SpinBox_skew.setValue(self.skew_th)
-        self.verticalLayout_5.addWidget(self.SpinBox_skew)
-        self.label_itt = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_itt.setFont(font)
-        self.label_itt.setObjectName("label_itt")
-        self.verticalLayout_5.addWidget(self.label_itt)
-        self.spinBox_itt = QtWidgets.QSpinBox(self.tabsetting)
-        self.spinBox_itt.setObjectName("spinBox_itt")
-        self.spinBox_itt.setValue(self.syn_itter)
-        self.verticalLayout_5.addWidget(self.spinBox_itt)
-        self.label_11 = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_11.setFont(font)
-        self.label_11.setObjectName("label_11")
-        self.verticalLayout_5.addWidget(self.label_11)
-        self.lineEdit_permutation = QtWidgets.QLineEdit(self.tabsetting)
-        self.lineEdit_permutation.setObjectName("lineEdit_permutation")
-        self.verticalLayout_5.addWidget(self.lineEdit_permutation)
-        self.comboBox_F0_method = QtWidgets.QComboBox(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.comboBox_F0_method.setFont(font)
-        self.comboBox_F0_method.setIconSize(QtCore.QSize(16, 16))
-        self.comboBox_F0_method.setObjectName("comboBox_F0_method")
-        self.comboBox_F0_method.addItem("")
-        self.comboBox_F0_method.addItem("")
-        self.comboBox_F0_method.addItem("")
-        default_index = 2
-        self.comboBox_F0_method.setCurrentIndex(default_index)
-        self.verticalLayout_5.addWidget(self.comboBox_F0_method)
-        self.label_alpha_factor = QtWidgets.QLabel(self.tabsetting)
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.label_alpha_factor.setFont(font)
-        self.label_alpha_factor.setObjectName("label_alpha_factor")
-        self.verticalLayout_5.addWidget(self.label_alpha_factor)
-        self.SpinBox_alpha_factor = QtWidgets.QDoubleSpinBox(self.tabsetting)
-        self.SpinBox_alpha_factor.setObjectName("SpinBox_alpha_factor")
-        self.SpinBox_alpha_factor.setValue(self.alpha)
-        self.verticalLayout_5.addWidget(self.SpinBox_alpha_factor)
+
+        self.label_6, self.SpinBox_skew = self.init_spinbox("label_6", "SpinBox_skew", self.tabsetting, self.skew_th, self.verticalLayout_5, double=True)
+        self.label_itt, self.spinBox_itt = self.init_spinbox("label_itt", "spinBox_itt", self.tabsetting, self.syn_itter, self.verticalLayout_5)
+        self.label_11, self.lineEdit_permutation = self.init_lineEdit("label_11", "lineEdit_permutation", self.tabsetting, self.verticalLayout_5)
+        self.comboBox_F0_method = self.init_combobox("comboBox_F0_method", self.tabsetting, 2, self.verticalLayout_5, 2)
+        self.label_alpha_factor, self.SpinBox_alpha_factor = self.init_spinbox("label_alpha_factor", "SpinBox_alpha_factor", self.tabsetting, self.alpha, self.verticalLayout_5, double=True)
+        self.SpinBox_alpha_factor.setRange(0., 1.)
+        self.SpinBox_alpha_factor.setWrapping(True)
 
         self.generate_figure_checkBox = self.init_checkbox("generate_figure_checkBox", self.tabsetting, self.verticalLayout_5)
         self.Convolve_checkBox = self.init_checkbox("Convolve_checkBox", self.tabsetting, self.verticalLayout_5)
+        
+        #_________________________________
 
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem)
-        #------------------------------------------
+        self.verticalLayout_2.addLayout(self.verticalLayout_5)
+
         self.Metadata_push = QtWidgets.QPushButton(self.tabsetting)
         self.Metadata_push.setObjectName("pushButton")
         self.Metadata_push.clicked.connect(self.get_Metadata)
         self.verticalLayout_5.addWidget(self.Metadata_push)
-        #----------------------------------------
+
         self.savesetting_pushButton = QtWidgets.QPushButton(self.tabsetting)
         self.savesetting_pushButton.setObjectName("pushButton")
         self.savesetting_pushButton.clicked.connect(self.get_setting_input)
         self.verticalLayout_5.addWidget(self.savesetting_pushButton)
-        self.verticalLayout_2.addLayout(self.verticalLayout_5)
 
         #___________________________GENERAL TAB______________________________
         
-        self.tabGeneral.addTab(self.tabsetting, "")
         self.General = QtWidgets.QWidget()
         self.General.setObjectName("General")
         
@@ -283,11 +231,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.horizontalLayout_2.addLayout(self.verticalLayout_3)
         
-        self.label_mouse_line, self.lineEdit_mouse_line = self.init_lineEdit("label", "lineEdit", self.General, self.verticalLayout_3)
-        self.label_mouse_code, self.lineEdit_mouse_code = self.init_lineEdit("label_mouse_code", "lineEdit_mouse_code", self.General, self.verticalLayout_3)  
-        self.label_session, self.lineEdit_session = self.init_lineEdit("label session", "lineEdit_session", self.General, self.verticalLayout_3)
-        self.label_first_frame, self.lineEdit_first_frame = self.init_lineEdit("label_first_frame", "lineEdit_first_frame", self.General, self.verticalLayout_3)
-        self.label_last_frame, self.lineEdit_last_frame = self.init_lineEdit("label_last_frame", "lineEdit_last_frame", self.General, self.verticalLayout_3)  
+        self.label_mouse_line, self.lineEdit_mouse_line = self.init_lineEdit("label", "lineEdit", self.General, self.verticalLayout_3, self.font)
+        self.label_mouse_code, self.lineEdit_mouse_code = self.init_lineEdit("label_mouse_code", "lineEdit_mouse_code", self.General, self.verticalLayout_3, self.font)  
+        self.label_session, self.lineEdit_session = self.init_lineEdit("label session", "lineEdit_session", self.General, self.verticalLayout_3, self.font)
+        self.label_first_frame, self.lineEdit_first_frame = self.init_lineEdit("label_first_frame", "lineEdit_first_frame", self.General, self.verticalLayout_3, self.font)
+        self.label_last_frame, self.lineEdit_last_frame = self.init_lineEdit("label_last_frame", "lineEdit_last_frame", self.General, self.verticalLayout_3, self.font)  
 
         self.verticalLayout_7.addLayout(self.horizontalLayout_2)
 
@@ -317,7 +265,9 @@ class Ui_MainWindow(object):
 
         #_________________________________
 
+        self.tabGeneral.addTab(self.tabsetting, "")
         self.tabGeneral.addTab(self.General, "")
+        
         self.gridLayout_4.addWidget(self.tabGeneral, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -403,11 +353,13 @@ class Ui_MainWindow(object):
         self.speed_filter = float(self.lineEdit_speed_filter.text())
         self.min_PM_win = int(self.lineEdit_min_PM_win.text())
         self.syn_itter = int(self.spinBox_itt.value())
+
     def get_Metadata(self):
         self.upload_metadata = True
         options = QFileDialog.Options()
         options |= QFileDialog.ShowDirsOnly
         self.meta_data_directory = QFileDialog.getExistingDirectory(None, "Select metadata folder", options=options)
+    
     def generate_file(self):
         metadata = {'Mouse_line': self.mouseLine,
                    'Mouse_Code': self.mousecode,
@@ -452,32 +404,56 @@ class Ui_MainWindow(object):
         return self.generate_figure_checkBox.isChecked()
     
 
-    def init_lineEdit(self, name_label: str, name_lineedit: str, tab, vlayout):
-          label = QtWidgets.QLabel(tab)
-          label.setObjectName(name_label)
-          vlayout.addWidget(label)
-          lineedit = QtWidgets.QLineEdit(tab)
-          lineedit.setObjectName(name_lineedit)
-          vlayout.addWidget(lineedit)
-          return label, lineedit
+    def init_lineEdit(self, name_label: str, name_lineedit: str, tab, vlayout=None, font=QtGui.QFont("DejaVu Sans", 10)):
+        label = QtWidgets.QLabel(tab)
+        label.setObjectName(name_label)
+        label.setFont(font)
+        lineedit = QtWidgets.QLineEdit(tab)
+        lineedit.setObjectName(name_lineedit)
+        lineedit.setFont(font)
+        if vlayout != None : 
+            vlayout.addWidget(label)
+            vlayout.addWidget(lineedit)
+        return label, lineedit
         
-    def init_checkbox(self, name: str, tab, vlayout):
+    def init_checkbox(self, name: str, tab, vlayout, font=QtGui.QFont("DejaVu Sans", 10)):
         checkbox = QtWidgets.QCheckBox(tab)
-        checkbox.setFont(self.font)
+        checkbox.setFont(font)
         checkbox.setObjectName(name)
         vlayout.addWidget(checkbox)
         return checkbox
     
-    def init_combobox(self, name: str, tab, nb_choice: int):
+    def init_combobox(self, name: str, tab, nb_choice: int, vlayout=None, default_idx=0, font=QtGui.QFont("DejaVu Sans", 10)):
         combobox = QtWidgets.QComboBox(tab)
         combobox.setObjectName(name)
+        combobox.setFont(font)
         for i in range(nb_choice+1):
-                combobox.addItem("")
+            combobox.addItem("")
+        combobox.setCurrentIndex(default_idx)
+        if vlayout != None : 
+            vlayout.addWidget(combobox)
         return combobox
     
-    def init_traces(self, name_label: str, name_graph: str, path, vlayout):
+    def init_spinbox(self, name_label: str, name_lineedit: str, tab, default_value=0.0 , vlayout=None, double=False, font=QtGui.QFont("DejaVu Sans", 10)):
+        label = QtWidgets.QLabel(tab)
+        label.setObjectName(name_label)
+        label.setFont(font)
+        if double :
+             spinbox = QtWidgets.QDoubleSpinBox(tab)
+             spinbox.setSingleStep(0.05)
+        else :
+             spinbox = QtWidgets.QSpinBox(tab)
+        spinbox.setObjectName(name_lineedit)
+        spinbox.setValue(default_value)
+        spinbox.setFont(font)
+        if vlayout != None : 
+            vlayout.addWidget(label)
+            vlayout.addWidget(spinbox)
+        return label, spinbox
+        
+    def init_traces(self, name_label: str, name_graph: str, path, vlayout, font=QtGui.QFont("DejaVu Sans", 10)):
         label = QtWidgets.QLabel(self.General)
-        label.setFont(self.font)
+        label.setFont(font)
         label.setObjectName(name_label)
         vlayout.addWidget(label)
         graph = QtWidgets.QGraphicsView(self.General)
