@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
         self.tabGeneral.setTabBarAutoHide(False)
         self.tabGeneral.setObjectName("tabGeneral")
 
-        #----------------------------variables-----------------------------
+        #----------------------------Constants-----------------------------
         self.recording_date = None
         self.upload_metadata = False
         self.F0_method = 'sliding'
@@ -60,7 +60,10 @@ class Ui_MainWindow(object):
 
         #-------------------------- Display variables------------------------
         self.font = QtGui.QFont("DejaVu Sans", 9)
-        
+
+        #----------------------------Variables-----------------------------
+        self.have_metadata = False
+
         #___________________________SETTING TAB______________________________
         
         self.tabsetting = QtWidgets.QWidget()
@@ -320,6 +323,9 @@ class Ui_MainWindow(object):
                 self.statusbar.showMessage('Error: choose a valid Neuronal Type or select a metadata file', 4000)
         if self.directory == "":
                 self.show_warning_popup("Do you want to analyze data without final compiling?")
+        else : 
+            self.have_metadata = True
+            self.statusbar.showMessage('Close the window', 4000)
         return self.recording_date
 
     def show_warning_popup(self, message):
@@ -358,7 +364,8 @@ class Ui_MainWindow(object):
         options = QFileDialog.Options()
         options |= QFileDialog.ShowDirsOnly
         self.meta_data_directory = QFileDialog.getExistingDirectory(None, "Select metadata folder", options=options)
-    
+        self.statusbar.showMessage('Folder selected', 4000)
+
     def generate_file(self):
         metadata = {'Mouse_line': self.mouseLine,
                    'Mouse_Code': self.mousecode,
