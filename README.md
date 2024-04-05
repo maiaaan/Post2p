@@ -9,7 +9,11 @@ Create an environnment with python=3.9. Then, install all the needed dependencie
 ```console
 pip install -r requirements.txt
 ```
+## Installing the latest github version of the code
 
+```console
+pip install git+https://github.com/maiaaan/Post2p.git
+```
 ## Getting started
 
 Run the Post2P.2.6.py file.
