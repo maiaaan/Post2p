@@ -360,13 +360,15 @@ class Ui_MainWindow(object):
         self.speed_filter = float(self.lineEdit_speed_filter.text())
         self.min_PM_win = int(self.lineEdit_min_PM_win.text())
         self.syn_itter = int(self.spinBox_itt.value())
+        self.statusbar.showMessage('New parameters saved', 4000)
 
     def get_Metadata(self):
         self.upload_metadata = True
         options = QFileDialog.Options()
         options |= QFileDialog.ShowDirsOnly
         self.meta_data_directory = QFileDialog.getExistingDirectory(None, "Select metadata folder", options=options)
-        self.statusbar.showMessage('Folder selected', 4000)
+        if self.meta_data_directory != "" :
+            self.statusbar.showMessage('Folder selected', 4000)
 
     def generate_file(self):
         metadata = {'Mouse_line': self.mouseLine,
@@ -516,7 +518,7 @@ class Ui_MainWindow(object):
         self.label_alpha_factor.setText(_translate("MainWindow", "Alpha factor"))
         self.generate_figure_checkBox.setText(_translate("MainWindow", "Generate figure"))
         self.Convolve_checkBox.setText(_translate("MainWindow", "Convolve data"))
-        self.savesetting_pushButton.setText(_translate("MainWindow", "Save change"))
+        self.savesetting_pushButton.setText(_translate("MainWindow", "Save Parameter Changes"))
         self.Metadata_push.setText(_translate("MainWindow", "Upload Metadata"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.tabsetting), _translate("MainWindow", "Settings"))
         self.label_mean_F.setText(_translate("MainWindow", "Mean Fluorescence Trace"))
