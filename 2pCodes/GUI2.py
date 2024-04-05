@@ -196,10 +196,10 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout_2.addLayout(self.verticalLayout)
 
-        self.checkBox_lag_analyse = self.init_checkbox("checkBox_lag_analyse", self.General, self.verticalLayout)
-        self.checkBox_skew_analyse = self.init_checkbox("checkBox_skew_analyse", self.General, self.verticalLayout)
-        self.checkBox_pupil_analyse = self.init_checkbox("checkBox_pupil_analyse", self.General, self.verticalLayout)
-        self.checkBox_face_analyse = self.init_checkbox("checkBox_face_analyse", self.General, self.verticalLayout)
+        self.checkBox_lag_analyse = self.init_checkbox("checkBox_lag_analyse", self.General, self.verticalLayout, True)
+        self.checkBox_skew_analyse = self.init_checkbox("checkBox_skew_analyse", self.General, self.verticalLayout, True)
+        self.checkBox_pupil_analyse = self.init_checkbox("checkBox_pupil_analyse", self.General, self.verticalLayout, True)
+        self.checkBox_face_analyse = self.init_checkbox("checkBox_face_analyse", self.General, self.verticalLayout, True)
         self.checkBox_remove_blinking = self.init_checkbox("checkBox_remove_blinking", self.General, self.verticalLayout)
         self.checkBox_generate_metadata = self.init_checkbox("checkBox_generate_metadata", self.General, self.verticalLayout)
 
@@ -305,9 +305,10 @@ class Ui_MainWindow(object):
         self.sensor = self.comboBox_sensor.currentText()
         self.sex = self.comboBox_sex.currentText()
         self.recording_date = self.dateEdit.date().toString("yyyy-MM-dd")
+
         if self.directory == "":
             self.show_warning_popup("Do you want to analyze data without final compiling?")
-        
+
         if not self.mouseLine.strip() and self.upload_metadata == False:
                 self.statusbar.showMessage('Error: Enter mouse line or select a metadata file!', 5000)
         elif not self.mousecode.strip() and self.upload_metadata == False:
@@ -424,10 +425,12 @@ class Ui_MainWindow(object):
             vlayout.addWidget(lineedit)
         return label, lineedit
         
-    def init_checkbox(self, name: str, tab, vlayout, font=QtGui.QFont("DejaVu Sans", 10)):
+    def init_checkbox(self, name: str, tab, vlayout, checked=False, font=QtGui.QFont("DejaVu Sans", 10)):
         checkbox = QtWidgets.QCheckBox(tab)
         checkbox.setFont(font)
         checkbox.setObjectName(name)
+        if checked :
+            checkbox.setChecked(True)
         vlayout.addWidget(checkbox)
         return checkbox
     
