@@ -55,12 +55,13 @@ print("TIM", len(TIM))
 figure.GUIimage(TIM, motion, save_direction_figure, "raw_face_motion.png")
 figure.GUIimage(TIM, pupil, save_direction_figure, "pupil.png")
 figure.GUIimage(TIM, Mean_raw_F,save_direction_figure,"raw_mean_F.png")
+
 #----------------------------------Load GUI-----------------------------------
 class MyWindow(QtWidgets.QMainWindow):
     def __init__(self, image_file, data_file):
         super().__init__()
         self.ui = Ui_MainWindow()
-        self.ui.setupUi(self,save_direction_figure, len_data)
+        self.ui.setupUi(self, Base_path, save_direction_figure, len_data)
 
 if __name__ == "__main__":
 
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     window = MyWindow(save_direction_figure, len_data)
     window.show()
     app.exec_()
+
 #-----------------------------Get data from GUI---------------------------------
 upload_metadata = window.ui.upload_metadata
 generate_metadata = window.ui.get_generate_metadata()

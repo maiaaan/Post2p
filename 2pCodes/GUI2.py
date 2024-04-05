@@ -1,12 +1,14 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, QtCore, Qt
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QFileDialog
 import os
+import glob
+import json
 
 class Ui_MainWindow(object):
     
-    def setupUi(self, MainWindow, figure_path, LenData):
+    def setupUi(self, MainWindow, base_path, figure_path, LenData):
 
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(580, 775)
@@ -282,6 +284,7 @@ class Ui_MainWindow(object):
         self.retranslateUi(MainWindow)
         self.tabGeneral.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        self.set_metadata_input(base_path)
 
     def display_text(self, text, color):
         for item in self.scene4.items():
@@ -291,6 +294,27 @@ class Ui_MainWindow(object):
         item.setDefaultTextColor(QtGui.QColor(color))
         self.scene4.addItem(item)
 
+    def set_metadata_input(self, base_path) : 
+        METADATA = glob.glob(os.path.join(base_path, 'metadata.txt'))[0]
+        try :
+            with open( METADATA,'r') as file:
+                data = file.read()
+            json_data = json.loads(data)
+            self.lineEdit_mouse_line.setText(json_data["Mouse_line"])
+            self.lineEdit_mouse_code.setText(json_data["Mouse_Code"])
+            self.lineEdit_session.setText(json_data["Session"])
+            self.comboBox_Genotype.setCurrentText(json_data["Genotype"])
+            self.comboBox_N_type.setCurrentText(json_data ["Neuron_type"])
+            self.comboBox_sensor.setCurrentText(json_data["Sensor"])
+            self.comboBox_screen.setCurrentText(json_data["Screen_state"])
+            self.comboBox_sex.setCurrentText(json_data["Sex"])
+            date = QtCore.QDate().fromString(json_data["Date_of_record"], QtCore.Qt.ISODate)
+            self.dateEdit.setDate(date)
+            print("Metadata loaded from file in Base path folder")
+        except Exception as error:    
+            print('No metadata file found in Base path. Please load file or enter data in GUI.')
+        
+         
     def get_input(self):
         self.get_setting_input
         self.save_metadata = self.generate_file()
@@ -516,7 +540,7 @@ class Ui_MainWindow(object):
         self.comboBox_F0_method.setItemText(1, _translate("MainWindow", "hamming"))
         self.comboBox_F0_method.setItemText(2, _translate("MainWindow", "sliding"))
         self.label_alpha_factor.setText(_translate("MainWindow", "Alpha factor"))
-        self.generate_figure_checkBox.setText(_translate("MainWindow", "Generate figure"))
+        self.generate_figure_checkBox.setText(_translate("MainWindow", "Generate SVG figure"))
         self.Convolve_checkBox.setText(_translate("MainWindow", "Convolve data"))
         self.savesetting_pushButton.setText(_translate("MainWindow", "Save Parameter Changes"))
         self.Metadata_push.setText(_translate("MainWindow", "Upload Metadata"))
