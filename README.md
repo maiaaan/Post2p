@@ -20,7 +20,7 @@ Run the Post2P.2.6.py file.
 
 The selected folder for processing must include : 
 - The suite2p folder
-- The xml time stamps file
+- The .xml time stamps file
 - The rotary file
 - The facemap _proc.npy file
-- the txt metadata file (Optional)
+- the .txt metadata file (Optional). If included in the folder, metadata will be loaded in the GUI.
