@@ -305,27 +305,28 @@ class Ui_MainWindow(object):
         self.sensor = self.comboBox_sensor.currentText()
         self.sex = self.comboBox_sex.currentText()
         self.recording_date = self.dateEdit.date().toString("yyyy-MM-dd")
-        if not self.mouseLine.strip() and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: Enter mouse line or select a metadata file!', 4000)
-        if not self.mousecode.strip() and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: Enter mouse code or select a metadata file!', 4000)
-        if not self.session.strip() and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: Enter recording session or select a metadata file!', 4000)
-        if self.comboBox_sensor.currentText() == "Sensor" and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: Enter Sensor type or select a metadata file!', 4000)
-        if self.comboBox_sex.currentText() == "Sex" and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: choose a valid sex or select a metadata file', 4000)
-        if self.comboBox_screen.currentText() == "Screen state" and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: choose a valid screen state or select a metadata file', 4000)
-        if self.comboBox_Genotype.currentText() == "Genotype" and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: choose a valid Genotype or select a metadata file', 4000)
-        if self.comboBox_N_type.currentText() == "Neuronal Type" and self.upload_metadata == False:
-                self.statusbar.showMessage('Error: choose a valid Neuronal Type or select a metadata file', 4000)
         if self.directory == "":
-                self.show_warning_popup("Do you want to analyze data without final compiling?")
+            self.show_warning_popup("Do you want to analyze data without final compiling?")
+        
+        if not self.mouseLine.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter mouse line or select a metadata file!', 5000)
+        elif not self.mousecode.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter mouse code or select a metadata file!', 5000)
+        elif not self.session.strip() and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter recording session or select a metadata file!', 5000)
+        elif self.comboBox_sensor.currentText() == "Sensor" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: Enter Sensor type or select a metadata file!', 5000)
+        elif self.comboBox_sex.currentText() == "Sex" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid sex or select a metadata file', 5000)
+        elif self.comboBox_screen.currentText() == "Screen state" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid screen state or select a metadata file', 5000)
+        elif self.comboBox_Genotype.currentText() == "Genotype" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid Genotype or select a metadata file', 5000)
+        elif self.comboBox_N_type.currentText() == "Neuronal Type" and self.upload_metadata == False:
+                self.statusbar.showMessage('Error: choose a valid Neuronal Type or select a metadata file', 5000)
         else : 
             self.have_metadata = True
-            self.statusbar.showMessage('Close the window', 4000)
+            self.statusbar.showMessage('Close the window', 0)
         return self.recording_date
 
     def show_warning_popup(self, message):
