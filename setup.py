@@ -5,6 +5,7 @@ setup(
     name='Post2p',
     version='1.0.0',
     packages=find_packages(),
+    package_data={'': ['2pCodes/*']},
     url='https://github.com/faezehrabbani97/Post2p',
     license='MIT',
     author='Faezeh Rabbani',
