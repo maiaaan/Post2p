@@ -16,7 +16,3 @@ python -m venv Post2P
 ```
 pip install git+https://github.com/faezehrabbani97/Post2p.git
 ```
-6. Install all requirenments using this comment in the Command Prompt:
-```
-pip install -r requirements.txt
-```
