@@ -6,11 +6,11 @@ Post2p is an integrated software to analyze the results of calcium imaging and b
 2. Open your command prompt and navigate to the directory where you want to clone the pipeline. You can use this comment `cd path\to\your\project` to navigate to your preferable directory
 4. Creat a new virtual Environment "venv" with:
 ```
-python -m venv Post2P
+python -m venv Post2p
 ```
 5. Activate venv using this code:
 ```
-.\Post2P\Scripts\activate
+.\Post2p\Scripts\activate
 ```
 6. Install Post2p using this commend:
 ```
