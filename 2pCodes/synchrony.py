@@ -127,4 +127,3 @@ def plot_data(a, b, save_path, svg, ax=None):
         save_direction_svg = os.path.join(save_path, svg_name)
         plt.savefig(save_direction_svg,format = 'svg')
     plt.savefig(save_path2)
-
