@@ -10,6 +10,6 @@ setup(
     license='MIT',
     author='Faezeh Rabbani',
     author_email='faezeh.rabbani97@gmail.com',
-    description='Description of your package',
+    description='Description',
     install_requires=[requirements],
 )
