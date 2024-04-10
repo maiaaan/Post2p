@@ -44,7 +44,7 @@ x_inter = xml['Green']['relativeTime']
 last = x_inter[-1]
 xp = np.linspace(x_inter[0], last, len(pupil))
 pupil = np.interp(x_inter, xp, pupil)
-motion = np.interp(x_inter, xp,motion )
+motion = np.interp(x_inter, xp, motion)
 # ----------------------------------Making figure for GUI---------------------------------
 TIM = np.arange(0,len(motion))
 Mean_raw_F = np.mean(F, 0)
@@ -115,29 +115,33 @@ if launch_processing :
                 file.write(json.dumps(metadata, indent=4))
 
     compile_directory = window.ui.directory
+
     DO_MOTION = window.ui.get_face_state()
     Do_pupil = window.ui.get_pupil_state()
     convolve = window.ui.get_convolve_state()
     svg = window.ui.get_generate_svg_state()
-    neuropil_impact_factor = window.ui.alpha
     Do_lag = window.ui.get_lag_state()
     Do_skew = window.ui.get_skew_state()
-    F0_method = window.ui.F0_method
-    print("F0_method", F0_method)
     remove_blink = window.ui.get_blink_state()
+    
+    neuropil_impact_factor = window.ui.alpha
+    F0_method = window.ui.F0_method
     st_FA = window.ui.first_frame
     end_FA = window.ui.last_frame
-    speed_threshold = window.ui.speed_threshold
-    m_th = window.ui.motion_th
-    M_filter_kernel = window.ui.motion_filter
-    S_filter_kernel = window.ui.speed_filter
-    skew_threshold = window.ui.skew_th
     N_iterations = window.ui.syn_itter
     permutation_sample = window.ui.num_permutation
-    min_Run_win = window.ui.min_Run_win
-    min_AS_win = window.ui.min_AS_win
-    min_Rest_win = window.ui.min_Rest_win
-    min_PM_win = window.ui.min_PM_win
+
+    min_states_window = {'run' : window.ui.min_Run_win, 
+                        'AS' : window.ui.min_AS_win, 
+                        'NABMA' : window.ui.min_PM_win, 
+                        'rest' : window.ui.min_Rest_win}
+    
+    filter_kernel = {'speed' : window.ui.speed_filter, 
+                     'motion' : window.ui.motion_filter}
+    
+    threshold = {'speed' : window.ui.speed_threshold,
+                 'motion' : window.ui.motion_th,
+                 'skew' : window.ui.skew_th}
     #-------------------------Find blinking frames blinking -------------------------
     ALL_ID = np.arange(0, len_data)
     if remove_blink:
@@ -177,21 +181,17 @@ if launch_processing :
     #-------------------------Calculation of dF/F
     dF = functions.deltaF_calculate(F, F0)
     Time = np.arange(0, len(motion))
-    filtered_motion = gaussian_filter1d(motion, M_filter_kernel)
-    filtered_speed = gaussian_filter1d(speed,S_filter_kernel)
-
-    motion_threshold = m_th*(np.std(motion))
+    filtered_motion = gaussian_filter1d(motion, filter_kernel['motion'])
+    filtered_speed = gaussian_filter1d(speed,filter_kernel['speed'])
     z_scored_dF = zscore(dF,1)
     #----------------------------------save svg----------------------------------
     if svg:
         figure.simple_plot_SVG(TIme, motion, save_direction_figure,"SVGface_motion.svg")
         figure.simple_plot_SVG(TIme, pupil, save_direction_figure,"SVGpupil.svg")
         figure.simple_plot_SVG(TIme, speed, save_direction_figure,"SVGspeed.svg")
-    #--------------------------------------------------------------------------------
-    Real_Time_Running, Running_window, Real_time_NABMA, NABMA_window,Real_Time_rest_window,rest_window,Real_time_AS, AS_window =\
-        motion_state.split_stages(motion,speed,TIme,speed_threshold,min_Run_win,min_AS_win,min_PM_win,min_Rest_win,S_filter_kernel,M_filter_kernel)
-    motion_state.stage_plot(Real_Time_Running,Real_time_NABMA,Real_Time_rest_window,Real_time_AS,
-            speed,motion,dF,TIme,Running_window,NABMA_window,rest_window,AS_window,save_direction_figure,pupil,S_filter_kernel,svg)
+    #-----------------------------Define mouse state and plot-----------------------------------
+    Real_Time_states, states_window = motion_state.split_stages(motion, speed, TIme, threshold, min_states_window, filter_kernel)
+    motion_state.stage_plot(motion, speed, pupil, dF, TIme, Real_Time_states, states_window, filter_kernel, save_direction_figure, svg, threshold)
     #------------------------------- Synchrony calculation------------------------------
     spikes = np.reshape(spikes, (dF.shape[0], dF.shape[1]))
     thr_spikes = [synchrony.sumbre_threshold(dF[roi], spikes[roi]) for roi in range(len(spikes))]
@@ -201,15 +201,15 @@ if launch_processing :
     synchrony.plot_matrix_synchro(matrix_synchro,save_direction_figure, "synchrony.png")
     synchrony.plot_matrix_synchro(matrix_shuffled_synchrony[0],save_direction_figure, "shuffeled_synchrony.png")
     #-----------------------Calculatin mean dF/F for different motion states---------------------
-    F_running = motion_state.mean_max_interval(dF,Running_window,'mean')
-    F_rest = motion_state.mean_max_interval(dF,rest_window,'mean')
-    F_NABMA = motion_state.mean_max_interval(dF,NABMA_window,'mean')
+    F_running = motion_state.mean_max_interval(dF, states_window['run'], 'mean')
+    F_rest = motion_state.mean_max_interval(dF, states_window['rest'], 'mean')
+    F_NABMA = motion_state.mean_max_interval(dF, states_window['NABMA'], 'mean')
     #-----------------------------------------------------
-    if len(Real_Time_rest_window) ==0 :
+    if len(Real_Time_states['rest']) == 0 :
         functions.save_data("matrix_synchro", save_data, matrix_synchro)
         functions.save_data("matrix_shuffled_synchrony", save_data, matrix_shuffled_synchrony)
         raise Exception("Rest window is zero")
-    if len(Real_Time_Running) ==0 :
+    if len(Real_Time_states['run']) ==0 :
         functions.save_data("matrix_synchro", save_data, matrix_synchro)
         functions.save_data("matrix_shuffled_synchrony", save_data, matrix_shuffled_synchrony)
         t = "ROI"
@@ -236,9 +236,9 @@ if launch_processing :
     LMI, _ = functions.detect_cell(valid_cell_LMI, LMI)
     mean_dF0 = np.mean(F0, 1)
     #-----------calculate Z scored states -----------
-    Z_mean_F_Running = motion_state.mean_max_interval(z_scored_dF,Running_window,'mean')
-    Z_mean_F_rest = motion_state.mean_max_interval(z_scored_dF,rest_window,'mean')
-    Z_mean_F_NABMA = motion_state.mean_max_interval(z_scored_dF,NABMA_window,'mean')
+    Z_mean_F_Running = motion_state.mean_max_interval(z_scored_dF, states_window['run'],'mean')
+    Z_mean_F_rest = motion_state.mean_max_interval(z_scored_dF, states_window['rest'],'mean')
+    Z_mean_F_NABMA = motion_state.mean_max_interval(z_scored_dF, states_window['NABMA'],'mean')
     #------------------creat General H5 Groups---------------
     behavioral_group = hf.create_group('behavioral')
     Ca_pre_group = hf.create_group('Ca_data')
@@ -290,10 +290,10 @@ if launch_processing :
         #--------------------------------------pupil correlation------------------------------------------------
         pupil_corr = [pearsonr(pupil, i)[0] for i in dF]
         Sub_processd_corr.create_dataset('pupil_corr',data = pupil_corr)
-        Mean_Running_pupil = motion_state.mean_interval(pupil, Running_window, method='mean')
-        Mean_NABMA_pupil = motion_state.mean_interval(pupil, NABMA_window, method='mean')
-        Mean_rest_pupil = motion_state.mean_interval(pupil, rest_window, method='mean')
-        Mean_AS_pupil = motion_state.mean_interval(pupil, AS_window, method='mean')
+        Mean_Running_pupil = motion_state.mean_interval(pupil, states_window['run'], method='mean')
+        Mean_NABMA_pupil = motion_state.mean_interval(pupil, states_window['NABMA'], method='mean')
+        Mean_rest_pupil = motion_state.mean_interval(pupil, states_window['rest'], method='mean')
+        Mean_AS_pupil = motion_state.mean_interval(pupil, states_window['AS'], method='mean')
         categories = ['Rest','paw_movement', 'Aroused_Stationary', 'Running']
         values = [Mean_rest_pupil, Mean_NABMA_pupil,Mean_AS_pupil, Mean_Running_pupil]
         functions.creat_H5_dataset(Sub_processd_PState, values, categories)
@@ -328,10 +328,10 @@ if launch_processing :
                             ,['Running', 'Rest', 'paw_movement'])
     #-----------------------------------------------------
     general_timing = TIme[-1] - TIme[0]
-    RUN_TIME = motion_state.state_duration(Real_Time_Running)
-    REST_TIME = motion_state.state_duration(Real_Time_rest_window)
-    only_paw_Time = motion_state.state_duration(Real_time_NABMA)
-    AS_TIME = motion_state.state_duration(Real_time_AS)
+    RUN_TIME = motion_state.state_duration(Real_Time_states['run'])
+    REST_TIME = motion_state.state_duration(Real_Time_states['rest'])
+    only_paw_Time = motion_state.state_duration(Real_Time_states['NABMA'])
+    AS_TIME = motion_state.state_duration(Real_Time_states['AS'])
     Run_percentage = (RUN_TIME/general_timing) * 100
     figure.Time_pie(AS_TIME, RUN_TIME, REST_TIME, only_paw_Time, general_timing,save_direction_figure,svg)
 
@@ -353,8 +353,8 @@ if launch_processing :
         figure.scatter_plot(num, mean_dF0, out_neurons_face, save_direction_figure,
                             'F0_face', 'Neuron','mean F0', 'pass face P test', 'fail face P test',svg)
         #----------------------------------------------------------
-        F_AS = motion_state.mean_max_interval(dF, AS_window, method='mean')
-        Z_mean_F_AS = motion_state.mean_max_interval(z_scored_dF, AS_window, method='mean')
+        F_AS = motion_state.mean_max_interval(dF, states_window['AS'], method='mean')
+        Z_mean_F_AS = motion_state.mean_max_interval(z_scored_dF, states_window['AS'], method='mean')
         mean_dF.create_dataset('AS', data=F_AS)
         Whisking_TIME = AS_TIME + RUN_TIME + only_paw_Time
         Whisking_percentage = (Whisking_TIME / TIme[-1])*100
@@ -365,7 +365,7 @@ if launch_processing :
             functions.creat_H5_dataset(Sub_processd_lag, [valid_daceMo_lag, lag_mean_dF_facemotion],
                                     ['FaceMotion_lag_valid_ROIs', 'lag_mean_dF_facemotion'])
         #----------------------------------------------------------------------------
-        if len(AS_window)>0 :
+        if len(states_window['AS'])>0 :
             AS_MI = [((F_AS[i] - F_rest[i]) / (F_AS[i] + F_rest[i])) for i in range(len(F_AS))]
             num_AS = np.arange(0, len(AS_MI))
             AS_MI_valid1 = functions.detect_valid_neurons(valid_neurons_face,AS_MI)
@@ -390,7 +390,7 @@ if launch_processing :
     Mean__dF = np.mean(dF, 0)
     num_LMI = np.arange(0, len(LMI))
     #------------------------------------Plot figure---------------------------------
-    figure.plot_running(TIme, speed, Real_Time_Running,filtered_speed,save_direction_figure,'Speed(cm/s)','Time(S)','speed.png',svg)
+    figure.plot_running(TIme, speed, Real_Time_states['run'],filtered_speed,save_direction_figure,'Speed(cm/s)','Time(S)','speed.png',svg)
     figure.histo_valid(valid_neurons_speed,save_direction_figure,speed_corr,"Speed validity")
     figure.HistoPlot(LMI, "H_Running LMI", save_direction_figure)
     figure.scatter_plot(num,mean_dF0,out_neurons_speed,save_direction_figure,'F0_speed','Neuron', 'mean F0', 'pass speed P test', 'fail speed P test',svg)
@@ -440,7 +440,7 @@ if launch_processing :
                 f"Run percentage = {Run_percentage}\n Whisking Time =  {Whisking_TIME}\n" \
                 f"Whisking percentage = {Whisking_percentage}\n neuropil impact factor = {neuropil_impact_factor}\n" \
                 f"F0 calculating method = {F0_method}\nThis session has {len(pupil)} frames\n" \
-                f"motion filter kernel = {M_filter_kernel}\nSpeed filter kernel = {S_filter_kernel}\n"\
+                f"motion filter kernel = {filter_kernel['motion']}\nSpeed filter kernel = {filter_kernel['speed']}\n"\
                 f"save path = {save_direction1}\n suite2p path = {Base_path}\n 2Photon setting:\n"\
                 f"channel number = {channel_number}\nLaser Wavelength = {laserWavelength}\nObjective Lens = {objectiveLens}" \
                 f"Objective Lens Mag = {objectiveLensMag}\nOptical Zoom = {opticalZoom}\nBit Depth = {bitDepth}\nDwell Time = {dwellTime}" \
@@ -450,7 +450,7 @@ if launch_processing :
             file.write(parameters + '\n')
     #motion_state.kruskal_test(z_scored_dF, Running_window, NABMA_window, rest_window, AS_window, save_direction_figure)
     if Do_skew:
-        mean_high_skew, mean_low_skew = skewness2.skewness(dF,skew_threshold, save_direction_skew, ROIs_group, LMI,Z_mean_F_Running, Z_mean_F_NABMA,
+        mean_high_skew, mean_low_skew = skewness2.skewness(dF, threshold['skew'], save_direction_skew, ROIs_group, LMI,Z_mean_F_Running, Z_mean_F_NABMA,
                 Z_mean_F_AS,Z_mean_F_rest,speed_corr,face_corr,TIme, pupil, speed, motion,svg)
     else:
         mean_high_skew = mean_low_skew = None

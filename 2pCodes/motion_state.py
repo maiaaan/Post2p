@@ -11,7 +11,7 @@ from scipy.stats import kruskal
 import os.path
 from matplotlib.lines import Line2D
 
-def split_stages(motion,speed, real_time,speed_threshold,min_run_win,min_AS_win,min_PM_win,min_Rest_win,S_filter_kernel,M_filter_kernel):
+def split_stages(motion, speed, real_time, threshold, min_states_window, filter_kernel):
     """
     October 2023 - Bacci Lab - faezeh.rabbani97@gmail.com
 
@@ -38,14 +38,16 @@ def split_stages(motion,speed, real_time,speed_threshold,min_run_win,min_AS_win,
     :return Real_time_Aroused_stationary2: windows of real timestamps for time windows that mouse is not activly running but whisking and pupil is aroused(s)
     :return Aroused_stationary_window2: windows of index for Aroused, stationary period(frame)
     """
-    ###------------------------------ Calculate active movement state -----------------------------###
 
-    ids = np.arange(0,len(speed))
+    undefined_state_idx = np.arange(0,len(speed))
+    ids = np.arange(0, len(speed))
+
+    ###------------------------------ Calculate active movement state -----------------------------###
     # duration > 60 frames and speed > 0.5 s/m
-    filtered_speed = gaussian_filter1d(speed, S_filter_kernel)
-    id_above_thr_speed = np.extract(filtered_speed >= speed_threshold, ids)
-    Aroused_Running_index, Aroused_Running_window, Real_Time_Aroused_Running = functions.find_intervals(id_above_thr_speed, min_run_win, real_time, 45)
-    # to extract running index use the function with bigger interval
+    filtered_speed = gaussian_filter1d(speed, filter_kernel['speed'])
+    id_above_thr_speed = np.extract(filtered_speed >= threshold['speed'], ids)
+    Aroused_Running_index, Aroused_Running_window, Real_Time_Aroused_Running = functions.find_intervals(id_above_thr_speed, min_states_window['run'], real_time, 45)
+
     Aroused_Running_index_check1 = []
     for i in Aroused_Running_index:
         if i[0]>45:
@@ -54,41 +56,45 @@ def split_stages(motion,speed, real_time,speed_threshold,min_run_win,min_AS_win,
             ST = np.arange(0, i[-1]+1)
         Aroused_Running_index_check1.append(ST)
     Aroused_Running_index_check = list(chain(*Aroused_Running_index_check1))
+
     ###------------------------------Calculate preliminary rest state-----------------------------###
     binary_movement = []
+    binary_movement_threshold = 0.01
     for i in filtered_speed:
-        if i < 0.01:
+        if i < binary_movement_threshold:
             binary_movement.append(0)
         else:
             binary_movement.append(1)
     binary_movement = np.array(binary_movement)
     id_rest = np.extract(binary_movement < 1, ids)
-    P_rest_index, _, _ = functions.find_intervals(id_rest, min_Rest_win, real_time)
+    P_rest_index, _, _ = functions.find_intervals(id_rest, min_states_window['rest'], real_time)
     P_rest_index = list(chain(*P_rest_index))
     ###------------------------------Calculate Aroused stationary state-----------------------------###
-    filtered_motion = gaussian_filter1d(motion, M_filter_kernel)
-    motion_threshold = 2*(np.std(motion))
+    filtered_motion = gaussian_filter1d(motion, filter_kernel['motion'])
+    motion_threshold = threshold['motion']*(np.std(motion))
     id_above_thr_motion = np.extract(filtered_motion >= motion_threshold, ids)
-    Aroused_stationary_index, Aroused_stationary_window, Real_time_Aroused_stationary  = functions.find_intervals(id_above_thr_motion, 30 , real_time)
+    Aroused_stationary_index_temp, _, _  = functions.find_intervals(id_above_thr_motion, 30, real_time)
     #to extract running index use the function with bigger interval
+    
     delet_Running_IDX = []
-    Aroused_stationary_index_check = list(chain(*Aroused_stationary_index))
+    Aroused_stationary_index_check = list(chain(*Aroused_stationary_index_temp))
     for i in Aroused_stationary_index_check:
         if i in Aroused_Running_index_check:
             delet_Running_IDX.append(i)
     mask = np.isin(Aroused_stationary_index_check, delet_Running_IDX, invert=True)
     result = np.extract(mask, Aroused_stationary_index_check)
-    Aroused_stationary_index2,Aroused_stationary_window2,Real_time_Aroused_stationary2 = functions.find_intervals(result,min_AS_win, real_time, 45)
+
+    Aroused_stationary_index, Aroused_stationary_window, Real_time_Aroused_stationary = functions.find_intervals(result, min_states_window['AS'], real_time, 45)
     ###------------------------------Calculate only whisking state-----------------------------###
     only_whisking = []
     for i in id_above_thr_motion:
         if i in P_rest_index:
             only_whisking.append(i)
-    only_whisking_index, only_whisking_window, Real_time_only_whisking_window = functions.find_intervals(only_whisking, 30, real_time)
+    only_whisking_index, _, _ = functions.find_intervals(only_whisking, 30, real_time)
     only_whisking = list(chain(*only_whisking_index))
     ###------------------------------Calculate final rest state-----------------------------###
-    rest_index3 = [x for x in P_rest_index if x not in only_whisking]
-    rest_index, rest_window2, Real_Time_rest_window2 = functions.find_intervals(rest_index3, 2, real_time)
+    rest_index_temp = [x for x in P_rest_index if x not in only_whisking]
+    rest_index, rest_window, Real_Time_rest = functions.find_intervals(rest_index_temp, 2, real_time)
     ###------------------------------Not aroused, basal motor activity-----------------------------###
     id_above_thr_binary = np.extract(binary_movement == 1, ids)
     delete_activity = []
@@ -100,17 +106,33 @@ def split_stages(motion,speed, real_time,speed_threshold,min_run_win,min_AS_win,
         else:
             delete_activity.append(1)
     Not_aroused_activity = np.extract(delete_activity, id_above_thr_binary)
-    Not_aroused_activity1, Not_aroused_activity_window2, Real_time_Not_aroused_activity2 = functions.find_intervals(Not_aroused_activity,min_PM_win, real_time, 45)
+    Not_aroused_activity_index, Not_aroused_activity_window, Real_time_Not_aroused_activity = functions.find_intervals(Not_aroused_activity, min_states_window['NABMA'], real_time, 45)
 
-    return Real_Time_Aroused_Running, Aroused_Running_window,\
-        Real_time_Not_aroused_activity2, Not_aroused_activity_window2,\
-        Real_Time_rest_window2, rest_window2,\
-        Real_time_Aroused_stationary2, Aroused_stationary_window2
+    ###------------------------------Undefined states-----------------------------###
+    to_delete__idx = []
+    for i in undefined_state_idx:
+        if i in list(chain(*Aroused_stationary_index)) or\
+                i in list(chain(*Aroused_Running_index)) or\
+                i in list(chain(*rest_index)) or\
+                i in list(chain(*Not_aroused_activity_index)):
+            to_delete__idx.append(i)
+    mask = np.isin(undefined_state_idx, to_delete__idx, invert=True)
+    result = np.extract(mask, undefined_state_idx)
+    _,  Undefined_state_window, Real_time_Undefined_state = functions.find_intervals(result, 0, real_time)
 
-# Real_Time_Aroused_Running, Aroused_Running_window,\
-#         Real_time_Not_aroused_activity2, Not_aroused_activity_window2,\
-#         Real_Time_rest_window2, rest_window2,\
-#         Real_time_Aroused_stationary2, Aroused_stationary_window2 = split_stages(motion, speed, real_time)
+    Real_Time_states = {'run' : Real_Time_Aroused_Running, 
+                        'AS' : Real_time_Aroused_stationary, 
+                        'NABMA' : Real_time_Not_aroused_activity, 
+                        'rest' : Real_Time_rest,
+                        'undefined' : Real_time_Undefined_state}
+    states_window = {'run' : Aroused_Running_window, 
+                     'AS' : Aroused_stationary_window, 
+                     'NABMA' : Not_aroused_activity_window, 
+                     'rest' : rest_window,
+                     'undefined' : Undefined_state_window}
+
+    return Real_Time_states, states_window
+
 def mean_max_interval(dF, interval, method):
     if method == 'max':
         All_cells = []
@@ -155,142 +177,150 @@ def mean_interval (X, interval, method):
     Max_interval_pupil= np.mean(pupil_interval)
     return Max_interval_pupil
 
-##------------------------------------Plotting_states2-----------------------------###
-def stage_plot(Real_Time_Aroused_Running, Real_time_Not_aroused_activity2, Real_Time_rest_window2,
-                Real_time_Aroused_stationary2, speed, motion, F, real_time,
-                Aroused_Running_window, Not_aroused_activity_window2, rest_window2,
-               Aroused_stationary_window2, save_dir, pupil,S_filter_kernel,svg):
-    speed = gaussian_filter1d(speed,S_filter_kernel)
-    min_val = np.min(motion)
-    max_val = np.max(motion)
-    min_speed = np.min(speed)
-    max_speed = np.max(speed)
-    # Apply Min-Max Scaling
-    normalizedmotion = (motion - min_val) / (max_val - min_val)
-    normalizespeed = (speed - min_speed) / (max_speed - min_speed)
-    ###------------------------------Plotting_states-----------------------------###
+def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_window, filter_kernel, save_dir, svg, threshold=None):
+    speed = gaussian_filter1d(speed, filter_kernel['speed'])
+    motion = gaussian_filter1d(motion, filter_kernel['motion'])
+    pupil = gaussian_filter1d(pupil, 10)
+
+    colors_list = ['crimson', 'darkorange', 'gold', 'c', 'gray']
+    colors_list2 = ['red', 'green', 'navajowhite', 'plum']
+    c = 'gray'
+    alphas_list = [[0.2,1], [0,1], [0,1], [0,1], [0,1]]
+    states_names = ['Running', 'NABMA', 'As', 'Rest', 'Undefined']
+
+    ###------------------------------Plotting_states2-----------------------------###
     Mean_F = np.mean(F, 0)
     filtered_F = gaussian_filter1d(Mean_F, 10)
-    marker_idx = list(chain(*Aroused_Running_window))
-    marker_idx2 = list(chain(*Not_aroused_activity_window2))
-    marker_idx3 = list(chain(*rest_window2))
-    marker_idx4 = list(chain(*Aroused_stationary_window2))
-    xy_vals = np.transpose([real_time, filtered_F])
-    line_segments = np.split(xy_vals, marker_idx)
-    line_segments2 = np.split(xy_vals, marker_idx2)
-    line_segments3 = np.split(xy_vals, marker_idx3)
-    line_segments4 = np.split(xy_vals, marker_idx4)
+    marker_idx1 = list(chain(*states_window['run']))
+    marker_idx2 = list(chain(*states_window['NABMA']))
+    marker_idx3 = list(chain(*states_window['AS']))
+    marker_idx4 = list(chain(*states_window['rest']))
+    marker_idx5 = list(chain(*states_window['undefined']))
+    marker_idx = [marker_idx1, marker_idx2, marker_idx3, marker_idx4, marker_idx5]
+    line_seg_list = [np.array([]), np.array([]), np.array([]), np.array([]), np.array([])]
 
+    #------------------
     fig2, ax = plt.subplots(4, 1, figsize=(17, 7))
-    ax[0].add_collection(LineCollection(line_segments,  colors=('crimson','gray'), alpha=[0.2,1]))
-    ax[0].add_collection(LineCollection(line_segments2, colors=('darkorange', 'gray'), alpha=[0,1]))
-    ax[0].add_collection(LineCollection(line_segments4, colors=('gold', 'gray'), alpha=[0,1]))
-    ax[0].add_collection(LineCollection(line_segments3, colors=('c', 'gray'), alpha=[0, 1]))
+
+    xy_vals = np.transpose([real_time, filtered_F])
+    for i in range(len(marker_idx)) :
+        line_seg_list[i] = np.split(xy_vals, marker_idx[i])
+    for i in range(len(line_seg_list)) :
+        ax[0].add_collection(LineCollection(line_seg_list[i],  colors=(colors_list[i]), alpha=alphas_list[i]))
 
     ax[0].set_ylim(min(filtered_F), max(filtered_F))
     ax[0].set_ylabel('dF/F')
-    ax[0].set_yticks([])
     ax[0].set_xticks([])
     ax[0].margins(x=0)
-    Running = Line2D([0], [0], color='crimson', linewidth=5)
-    N_aroused_motor_activity = Line2D([0], [0], color='darkorange', linewidth=5)
-    Aroused_stationary = Line2D([0], [0], color='gold', linewidth=5)
-    rest = Line2D([0], [0], color='c', linewidth=5)
-    ax[1].legend([Running, N_aroused_motor_activity, Aroused_stationary, rest],
-                 ['Running', 'Paw movement', 'As', 'Rest'],
-                 bbox_to_anchor=(1.0, 1.0) ,prop={'size': 6})
+    
     #------------------
+    zscored_speed = zscore(speed)
+    xy_vals = np.transpose([real_time, zscored_speed])
+    for i in range(len(marker_idx)) :
+        line_seg_list[i] = np.split(xy_vals, marker_idx[i])
+    for i in range(len(line_seg_list)) :
+        ax[1].add_collection(LineCollection(line_seg_list[i],  colors=(colors_list[i]), alpha=alphas_list[i]))
 
-    xy_vals = np.transpose([real_time, pupil])
-    line_segments = np.split(xy_vals, marker_idx)
-    line_segments2 = np.split(xy_vals, marker_idx2)
-    line_segments3 = np.split(xy_vals, marker_idx3)
-    line_segments4 = np.split(xy_vals, marker_idx4)
+    ax[1].set_ylim(min(zscored_speed), max(zscored_speed))
+    ax[1].set_ylabel('Speed z-score')
+    ax[1].set_xticks([])
+    ax[1].margins(x=0)
 
-    ax[2].add_collection(LineCollection(line_segments, colors=('crimson','gray'), alpha=[0.1,1]))
-    ax[2].add_collection(LineCollection(line_segments2, colors=('darkorange', 'gray'), alpha=[0,1]))
-    ax[2].add_collection(LineCollection(line_segments4, colors=('gold', 'gray'), alpha=[0,1]))
-    ax[2].add_collection(LineCollection(line_segments3, colors=('c', 'gray'), alpha=[0, 1]))
+    #------------------
+    zscored_pupil = zscore(pupil)
+    xy_vals = np.transpose([real_time, zscored_pupil])
+    for i in range(len(marker_idx)) :
+        line_seg_list[i] = np.split(xy_vals, marker_idx[i])
+    for i in range(len(line_seg_list)) :
+        ax[2].add_collection(LineCollection(line_seg_list[i],  colors=(colors_list[i]), alpha=alphas_list[i]))
 
     ax[2].set_ylim(min(pupil), max(pupil))
-    ax[2].set_ylabel('Z scored pupil')
+    ax[2].set_ylabel('Pupil z-score')
     ax[2].set_xticks([])
-    ax[2].set_yticks([])
     ax[2].margins(x=0)
+
     #--------------------
     zscored_motion = zscore(motion)
     xy_vals = np.transpose([real_time, zscored_motion])
-    line_segments = np.split(xy_vals, marker_idx)
-    line_segments2 = np.split(xy_vals, marker_idx2)
-    line_segments3 = np.split(xy_vals, marker_idx3)
-    line_segments4 = np.split(xy_vals, marker_idx4)
-
-    ax[3].add_collection(LineCollection(line_segments, colors=('crimson','gray'), alpha=[0.2,1]))
-    ax[3].add_collection(LineCollection(line_segments2, colors=('darkorange', 'gray'), alpha=[0,1]))
-    ax[3].add_collection(LineCollection(line_segments4, colors=('gold', 'gray'), alpha=[0,1]))
-    ax[3].add_collection(LineCollection(line_segments3, colors=('c', 'gray'), alpha=[0, 1]))
+    for i in range(len(marker_idx)) :
+        line_seg_list[i] = np.split(xy_vals, marker_idx[i])
+    for i in range(len(line_seg_list)) :
+        ax[3].add_collection(LineCollection(line_seg_list[i],  colors=(colors_list[i]), alpha=alphas_list[i]))
 
     ax[3].set_ylim(min(zscored_motion), max(zscored_motion))
-    ax[3].set_ylabel('Z scored motion')
+    ax[3].set_ylabel('Motion z-score')
     ax[3].set_xlabel('Time(s)')
-    ax[3].set_yticks([])
     ax[3].margins(x=0)
 
-    zscored_speed = gaussian_filter1d(speed, S_filter_kernel)
-    xy_vals = np.transpose([real_time, zscored_speed])
-    line_segments = np.split(xy_vals, marker_idx)
-    line_segments2 = np.split(xy_vals, marker_idx2)
-    line_segments3 = np.split(xy_vals, marker_idx3)
-    line_segments4 = np.split(xy_vals, marker_idx4)
-
-    ax[1].add_collection(LineCollection(line_segments, colors=('crimson','gray'), alpha=[0.2,1]))
-    ax[1].add_collection(LineCollection(line_segments2, colors=('darkorange', 'gray'), alpha=[0,1]))
-    ax[1].add_collection(LineCollection(line_segments4, colors=('gold', 'gray'), alpha=[0,1]))
-    ax[1].add_collection(LineCollection(line_segments3, colors=('c', 'gray'), alpha=[0, 1]))
-    ax[1].set_ylim(min(zscored_speed), max(zscored_speed))
-    ax[1].set_ylabel('Z scored speed')
-    #ax[1].set_yticks([])
-    ax[1].set_xticks([])
-    ax[1].margins(x=0)
+    #------------------
+    Running = Line2D([0], [0], color=colors_list[0], linewidth=5)
+    N_aroused_motor_activity = Line2D([0], [0], color=colors_list[1], linewidth=5)
+    Aroused_stationary = Line2D([0], [0], color=colors_list[2], linewidth=5)
+    rest = Line2D([0], [0], color=colors_list[3], linewidth=5)
+    undefined = Line2D([0], [0], color=colors_list[4], linewidth=5)
+    ax[0].legend([Running, N_aroused_motor_activity, Aroused_stationary, rest, undefined],
+                 states_names,
+                 loc='center left', bbox_to_anchor=(1.0, 1.0) ,prop={'size': 6})
+    
+    #------------------
     if svg == True:
         save_direction_svg = os.path.join(save_dir, "activity_states2.svg")
         fig2.savefig(save_direction_svg,format = 'svg')
     functions.save_fig("activity_states2", save_dir, fig2)
 
+    ##------------------------------------Plotting_states-----------------------------###
+    min_val = np.min(motion)
+    max_val = np.max(motion)
+    min_speed = np.min(speed)
+    max_speed = np.max(speed)
+
+    # Apply Min-Max Scaling
+    normalizedmotion = (motion - min_val) / (max_val - min_val)
+    normalizespeed = (speed - min_speed) / (max_speed - min_speed)
+
     fig, axs = plt.subplots(3, 1, figsize=(15, 5))
     # Create a basic plot
-    axs[0].plot(real_time,normalizedmotion )
-    axs[0].set_ylabel('whisking')
-    axs[0].set_yticks([])
+    axs[0].plot(real_time, filtered_F, color=c)
+    axs[0].set_ylabel('dF/F')
     axs[0].margins(x=0)
-    axs[1].plot(real_time,normalizespeed)
-    axs[1].set_ylabel('speed(cm/s)')
-    tr = len(F[0])*[0.5]
-    axs[1].plot(real_time, tr, color = 'r')
-    #axs[1].set_yticks([])
+    axs[1].set_xticks([])
+
+    axs[1].plot(real_time, normalizespeed, color=c)
+    axs[1].set_ylabel('speed')
     axs[1].margins(x=0)
     axs[1].set_xticks([])
-    axs[2].plot(real_time, filtered_F)
-    axs[2].set_ylabel('dF/F')
-    axs[2].set_yticks([])
-    axs[2].set_xlabel('Time(S)')
+
+    axs[2].plot(real_time, normalizedmotion, color=c)
+    axs[2].set_ylabel('face motion')
     axs[2].margins(x=0)
-    for i in range(len(Real_Time_Aroused_Running)):
-        axs[0].axvspan(Real_Time_Aroused_Running[i][0], Real_Time_Aroused_Running[i][-1], color='red', alpha=0.5)
-        axs[1].axvspan(Real_Time_Aroused_Running[i][0], Real_Time_Aroused_Running[i][-1], color='red', alpha=0.5)
-        axs[2].axvspan(Real_Time_Aroused_Running[i][0], Real_Time_Aroused_Running[i][-1], color='red', alpha=0.5)
-    for i in range(len(Real_time_Not_aroused_activity2)):
-        axs[0].axvspan(Real_time_Not_aroused_activity2[i][0], Real_time_Not_aroused_activity2[i][-1], color='green', alpha=0.5)
-        axs[1].axvspan(Real_time_Not_aroused_activity2[i][0], Real_time_Not_aroused_activity2[i][-1], color='green', alpha=0.5)
-        axs[2].axvspan(Real_time_Not_aroused_activity2[i][0], Real_time_Not_aroused_activity2[i][-1], color='green', alpha=0.5)
-    for i in range(len(Real_Time_rest_window2)):
-        axs[0].axvspan(Real_Time_rest_window2[i][0], Real_Time_rest_window2[i][-1], color='plum', alpha=0.5)
-        axs[1].axvspan(Real_Time_rest_window2[i][0], Real_Time_rest_window2[i][-1], color='plum', alpha=0.5)
-        axs[2].axvspan(Real_Time_rest_window2[i][0], Real_Time_rest_window2[i][-1], color='plum', alpha=0.5)
-    for i in range(len(Real_time_Aroused_stationary2)):
-        axs[0].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
-        axs[1].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
-        axs[2].axvspan(Real_time_Aroused_stationary2[i][0], Real_time_Aroused_stationary2[i][-1], color='navajowhite', alpha=0.5)
+    axs[2].set_xlabel('Time(s)')
+
+    if threshold != None :
+        tr = len(F[0])*[(threshold['speed'] - min_speed) / (max_speed - min_speed)]
+        axs[1].plot(real_time, tr, color = 'r', linestyle='--')
+        tr = len(F[0])*[(0.01 - min_speed) / (max_speed - min_speed)]
+        axs[1].plot(real_time, tr, color = 'peru', linestyle='--')
+        tr = len(F[0])*[(threshold['motion']*(np.std(motion)) - min_val) / (max_val - min_val)]
+        axs[2].plot(real_time, tr, color = 'r', linestyle='--')
+
+    for k in range(3):
+        for i in range(len(Real_Time_states['run'])):
+            axs[k].axvspan(Real_Time_states['run'][i][0], Real_Time_states['run'][i][-1], color=colors_list[0], alpha=0.5)
+        for i in range(len(Real_Time_states['NABMA'])):
+            axs[k].axvspan(Real_Time_states['NABMA'][i][0], Real_Time_states['NABMA'][i][-1], color=colors_list[1], alpha=0.5)
+        for i in range(len(Real_Time_states['rest'])):
+            axs[k].axvspan(Real_Time_states['rest'][i][0], Real_Time_states['rest'][i][-1], color=colors_list[3], alpha=0.5)
+        for i in range(len(Real_Time_states['AS'])):
+            axs[k].axvspan(Real_Time_states['AS'][i][0], Real_Time_states['AS'][i][-1], color=colors_list[2], alpha=0.5)
+    
+    Running = Line2D([0], [0], color=colors_list[0], linewidth=5)
+    N_aroused_motor_activity = Line2D([0], [0], color=colors_list[1], linewidth=5)
+    Aroused_stationary = Line2D([0], [0], color=colors_list[2], linewidth=5)
+    rest = Line2D([0], [0], color=colors_list[3], linewidth=5)
+    axs[0].legend([Running, N_aroused_motor_activity, Aroused_stationary, rest],
+                 states_names[:-1],
+                 loc='center left', bbox_to_anchor=(1.0, 1.0) ,prop={'size': 6})
+    
     if svg == True:
         save_direction_svg = os.path.join(save_dir, "activity_states.svg")
         fig.savefig(save_direction_svg,format = 'svg')
