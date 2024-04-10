@@ -295,14 +295,14 @@ def find_intervals(selected_ids, interval, RealTime, exclude_S = 0):
         else:
             pass
     for i in motion_index:
-        rael_time_W = []
+        real_time_W = []
         S_E = []
         S_E.append(i[0])
         S_E.append(i[-1])
-        rael_time_W.append(RealTime[i[0]])
-        rael_time_W.append(RealTime[i[-1]])
+        real_time_W.append(RealTime[i[0]])
+        real_time_W.append(RealTime[i[-1]])
         motion_window.append(S_E)
-        Real_TIME_W.append(rael_time_W)
+        Real_TIME_W.append(real_time_W)
     return motion_index, motion_window, Real_TIME_W
 
 def save_data(file_name, save_dir, data):
