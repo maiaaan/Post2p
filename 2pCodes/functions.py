@@ -21,6 +21,12 @@ def detect_cell(cell, F):
         F = np.delete(F, removed_ROI, axis=0)
     return F, keeped_ROI
 
+def remove_roi(remove_ROI, variables_to_update: dict):
+    if len(remove_ROI) != 0 :
+        for key in variables_to_update.keys() :
+           variables_to_update[key] = np.delete(variables_to_update[key], remove_ROI, axis=0)
+    return variables_to_update
+
 def creat_H5_dataset(group, variable, variable_name):
     for name, value in zip(variable_name, variable):
         group.create_dataset(name, data=value)
