@@ -6,18 +6,19 @@ from scipy import signal
 import pandas as pd
 import plotly.express as px
 
-def Time_pie(whisking_T, Running_T, Rest_T, Only_paw, general_timing,save_direction,svg):
-    not_used = general_timing -(whisking_T + Running_T + Rest_T + Only_paw)
-    labels = ["Resting/no whisking","Resting/whisking", "Running/whisking","Paw movment/whisking",  "not analyzed"]
-    fig = plt.figure(figsize=(10, 5))
-    sizes = [Rest_T,whisking_T , Running_T , Only_paw, not_used]
-    colors = ['lightpink','plum','steelblue','chocolate','lightslategrey']
+def Time_pie(Aroused_stat_T, Running_T, Rest_T, NABMA_T, total_duration, save_direction, svg):
+    not_used = total_duration - (Aroused_stat_T + Running_T + Rest_T + NABMA_T)
+    labels = ["Running/high whisking", "Stationnary/high whisking", "Stationnary/low whisking", "Resting/no whisking",  "Undefined"]
+    sizes = [Running_T , Aroused_stat_T, NABMA_T, Rest_T, not_used]
+    colors = ['crimson', 'darkorange', 'gold', 'c', 'gray']
     explode = (0.05, 0.05, 0.05, 0.05, 0.05)
-    plt.pie(sizes,labels=labels,
-            colors=colors, autopct='%1.1f%%', labeldistance=None, explode = explode)
-    plt.legend(labels = labels, loc='center left', bbox_to_anchor=(0.8, 0.3), frameon=False)
+
+    fig = plt.figure(figsize=(10, 5))
+    plt.pie(sizes, labels=labels, colors=colors, autopct='%.1f%%', labeldistance=None, pctdistance=1.2,
+            textprops={'fontsize': 12, 'fontweight':'bold'})
+    plt.legend(labels=labels, loc='center left', bbox_to_anchor=(0.8, 0.3), frameon=False)
     plt.axis('equal')
-    plt.title("Motion timing")
+    plt.title("Motion states duration")
     if svg == True:
         svg_name = "Motion_time.svg"
         save_direction_svg = os.path.join(save_direction, svg_name)

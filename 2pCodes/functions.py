@@ -108,7 +108,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, pearson_corr):
                 ax2.plot(time_corr[start:end], correlation[start:end], label="correlation")
                 ax2.set_title(r'$\Delta$F/F and ' + label + " correlation", fontsize=11)
                 ax2.set_yticks([])
-                ax2.axvline(lagI, color='plum', linestyle='dashed', linewidth=1.5)
+                ax2.axvline(lagI, color='plum', linestyle='dashed', linewidth=1.5, label=r'$lag_{max\_corr}$')
                 ax2.annotate(r'$lag_{max\_corr} = $'  + f'{lagI:.3f} s', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
                              ha='left')
                 

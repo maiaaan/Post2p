@@ -187,14 +187,14 @@ def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_wind
     colors_list2 = ['red', 'green', 'navajowhite', 'plum']
     c = 'gray'
     alphas_list = [[0.2,1], [0,1], [0,1], [0,1], [0,1]]
-    states_names = ['Running', 'NABMA', 'As', 'Rest', 'Undefined']
+    states_names = ['Running', 'As', 'NABMA', 'Rest', 'Undefined']
 
     ###------------------------------Plotting_states2-----------------------------###
     Mean_F = np.mean(F, 0)
     filtered_F = gaussian_filter1d(Mean_F, 10)
     marker_idx1 = list(chain(*states_window['run']))
-    marker_idx2 = list(chain(*states_window['NABMA']))
-    marker_idx3 = list(chain(*states_window['AS']))
+    marker_idx2 = list(chain(*states_window['AS']))
+    marker_idx3 = list(chain(*states_window['NABMA']))
     marker_idx4 = list(chain(*states_window['rest']))
     marker_idx5 = list(chain(*states_window['undefined']))
     marker_idx = [marker_idx1, marker_idx2, marker_idx3, marker_idx4, marker_idx5]
@@ -307,12 +307,13 @@ def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_wind
     for k in range(3):
         for i in range(len(Real_Time_states['run'])):
             axs[k].axvspan(Real_Time_states['run'][i][0], Real_Time_states['run'][i][-1], color=colors_list[0], alpha=0.5)
+        for i in range(len(Real_Time_states['AS'])):
+            axs[k].axvspan(Real_Time_states['AS'][i][0], Real_Time_states['AS'][i][-1], color=colors_list[1], alpha=0.5)
         for i in range(len(Real_Time_states['NABMA'])):
-            axs[k].axvspan(Real_Time_states['NABMA'][i][0], Real_Time_states['NABMA'][i][-1], color=colors_list[1], alpha=0.5)
+            axs[k].axvspan(Real_Time_states['NABMA'][i][0], Real_Time_states['NABMA'][i][-1], color=colors_list[2], alpha=0.5)
         for i in range(len(Real_Time_states['rest'])):
             axs[k].axvspan(Real_Time_states['rest'][i][0], Real_Time_states['rest'][i][-1], color=colors_list[3], alpha=0.5)
-        for i in range(len(Real_Time_states['AS'])):
-            axs[k].axvspan(Real_Time_states['AS'][i][0], Real_Time_states['AS'][i][-1], color=colors_list[2], alpha=0.5)
+
     
     Running = Line2D([0], [0], color=colors_list[0], linewidth=5)
     N_aroused_motor_activity = Line2D([0], [0], color=colors_list[1], linewidth=5)
