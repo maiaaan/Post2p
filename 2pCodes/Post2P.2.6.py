@@ -46,15 +46,15 @@ xp = np.linspace(x_inter[0], last, len(pupil))
 pupil = np.interp(x_inter, xp, pupil)
 motion = np.interp(x_inter, xp, motion)
 # ----------------------------------Making figure for GUI---------------------------------
-TIM = np.arange(0,len(motion))
+frames = np.arange(0,len(motion))
 Mean_raw_F = np.mean(F, 0)
 pupil = zscore(pupil)
 len_data = len(speed)
 print("mean raw F",len(Mean_raw_F))
-print("TIM", len(TIM))
-figure.GUIimage(TIM, motion, save_direction_figure, "raw_face_motion.png")
-figure.GUIimage(TIM, pupil, save_direction_figure, "pupil.png")
-figure.GUIimage(TIM, Mean_raw_F,save_direction_figure,"raw_mean_F.png")
+print("TIM", len(frames))
+figure.GUIimage(frames, motion, save_direction_figure, "raw_face_motion.png")
+figure.GUIimage(frames, pupil, save_direction_figure, "pupil.png")
+figure.GUIimage(frames, Mean_raw_F,save_direction_figure,"raw_mean_F.png")
 
 #----------------------------------Load GUI-----------------------------------
 class MyWindow(QtWidgets.QMainWindow):
@@ -72,12 +72,14 @@ if __name__ == "__main__":
     window.show()
     app.exec_()
 
-#-----------------------------Get data from GUI---------------------------------
-upload_metadata = window.ui.upload_metadata
-generate_metadata = window.ui.get_generate_metadata()
-launch_processing = window.ui.have_metadata
+LAUNCH_PROCESSING = window.ui.have_metadata
 
-if launch_processing : 
+if LAUNCH_PROCESSING : 
+
+    #-----------------------------Get data from GUI---------------------------------
+    upload_metadata = window.ui.upload_metadata
+    generate_metadata = window.ui.get_generate_metadata()
+
     if upload_metadata:
         meta_data_directory = window.ui.meta_data_directory
         print(meta_data_directory)
@@ -119,10 +121,10 @@ if launch_processing :
     DO_MOTION = window.ui.get_face_state()
     Do_pupil = window.ui.get_pupil_state()
     convolve = window.ui.get_convolve_state()
-    svg = window.ui.get_generate_svg_state()
+    SAVE_SVG = window.ui.get_generate_svg_state()
     Do_lag = window.ui.get_lag_state()
     Do_skew = window.ui.get_skew_state()
-    remove_blink = window.ui.get_blink_state()
+    REMOVE_BLINK = window.ui.get_blink_state()
     
     neuropil_impact_factor = window.ui.alpha
     F0_method = window.ui.F0_method
@@ -142,20 +144,21 @@ if launch_processing :
     threshold = {'speed' : window.ui.speed_threshold,
                  'motion' : window.ui.motion_th,
                  'skew' : window.ui.skew_th}
-    #-------------------------Find blinking frames blinking -------------------------
+    
+    #----------------Removing bad frames of neural and behavioral traces---------------
     ALL_ID = np.arange(0, len_data)
-    if remove_blink:
+    if REMOVE_BLINK:
         ALL_ID = functions.detect_blinking(pupil,ALL_ID,window =4)
     new_id = [i for i in ALL_ID if st_FA <= i < end_FA]
-    #----------------Removeing bad frames neural and behavioral traces---------------
     F = F[:, new_id]
-    motion = motion[new_id]
-    pupil = pupil[new_id]
-    TIme = x_inter[new_id]
-    speed = speed[new_id]
     Fneu_raw1 = Fneu_raw[:, new_id]
     spikes = spikes[:,new_id]
-    #------------------------------------Calculation alpha------------------
+    
+    motion = motion[new_id]
+    pupil = pupil[new_id]
+    real_time = x_inter[new_id]
+    speed = speed[new_id]
+    #------------------------------Calculate alpha------------------------
     if neuron_type == "PYR":
         neuropil_impact_factor, remove = functions.calculate_alpha(F,Fneu_raw1)
         #-----------------Remove Neurons with negative slope---------------
@@ -172,26 +175,33 @@ if launch_processing :
     F0 = functions.calculate_F0(F, Fs, percentile, mode= F0_method, win=60)
     #-----------------Remove Neurons with F0 less than 1
     zero_F0 = [i for i,val in enumerate(F0) if np.any(val < 1)]
-    invalid_cell_F0 = np.ones((len(F0), 2))
-    invalid_cell_F0[zero_F0, 0] = 0
-    F, _ = functions.detect_cell(invalid_cell_F0, F)
-    F0, _ = functions.detect_cell(invalid_cell_F0, F0)
-    RAWF, _ = functions.detect_cell(invalid_cell_F0, RAWF)
-    spikes, _ = functions.detect_cell(invalid_cell_F0, spikes)
+    if len(F0) != 0 :
+        invalid_cell_F0 = np.ones((len(F0), 2))
+        invalid_cell_F0[zero_F0, 0] = 0
+        var_to_update = {'F': F, 'F0' : F0, 'RAWF': RAWF, 'spikes' : spikes}
+        var_updated = functions.remove_roi(invalid_cell_F0, var_to_update)
+        F, _ = functions.detect_cell(invalid_cell_F0, F)
+        F0, _ = functions.detect_cell(invalid_cell_F0, F0)
+        RAWF, _ = functions.detect_cell(invalid_cell_F0, RAWF)
+        spikes, _ = functions.detect_cell(invalid_cell_F0, spikes)
     #-------------------------Calculation of dF/F
     dF = functions.deltaF_calculate(F, F0)
+    z_scored_dF = zscore(dF,1)
+
     Time = np.arange(0, len(motion))
     filtered_motion = gaussian_filter1d(motion, filter_kernel['motion'])
     filtered_speed = gaussian_filter1d(speed,filter_kernel['speed'])
-    z_scored_dF = zscore(dF,1)
+
     #----------------------------------save svg----------------------------------
-    if svg:
-        figure.simple_plot_SVG(TIme, motion, save_direction_figure,"SVGface_motion.svg")
-        figure.simple_plot_SVG(TIme, pupil, save_direction_figure,"SVGpupil.svg")
-        figure.simple_plot_SVG(TIme, speed, save_direction_figure,"SVGspeed.svg")
+    if SAVE_SVG:
+        figure.simple_plot_SVG(real_time, motion, save_direction_figure,"SVGface_motion.svg")
+        figure.simple_plot_SVG(real_time, pupil, save_direction_figure,"SVGpupil.svg")
+        figure.simple_plot_SVG(real_time, speed, save_direction_figure,"SVGspeed.svg")
+
     #-----------------------------Define mouse state and plot-----------------------------------
-    Real_Time_states, states_window = motion_state.split_stages(motion, speed, TIme, threshold, min_states_window, filter_kernel)
-    motion_state.stage_plot(motion, speed, pupil, dF, TIme, Real_Time_states, states_window, filter_kernel, save_direction_figure, svg, threshold)
+    Real_Time_states, states_window = motion_state.split_stages(motion, speed, real_time, threshold, min_states_window, filter_kernel)
+    motion_state.stage_plot(motion, speed, pupil, dF, real_time, Real_Time_states, states_window, filter_kernel, save_direction_figure, SAVE_SVG, threshold)
+    
     #------------------------------- Synchrony calculation------------------------------
     spikes = np.reshape(spikes, (dF.shape[0], dF.shape[1]))
     thr_spikes = [synchrony.sumbre_threshold(dF[roi], spikes[roi]) for roi in range(len(spikes))]
@@ -204,6 +214,7 @@ if launch_processing :
     F_running = motion_state.mean_max_interval(dF, states_window['run'], 'mean')
     F_rest = motion_state.mean_max_interval(dF, states_window['rest'], 'mean')
     F_NABMA = motion_state.mean_max_interval(dF, states_window['NABMA'], 'mean')
+    
     #-----------------------------------------------------
     if len(Real_Time_states['rest']) == 0 :
         functions.save_data("matrix_synchro", save_data, matrix_synchro)
@@ -219,21 +230,23 @@ if launch_processing :
             index=['Mean dF Rest'], columns=columns).T
         functions.save_exel('rest df.xlsx', save_data, M_variable)
         raise Exception("running window is zero")
-    #--------------------------------Calculating locomotion Modulotion index---------------------
-    valid_cell_LMI = np.zeros((len(dF), 2))
+    
+    #--------------------------------Calculating locomotion Modulation index---------------------
     LMI = [(F_running[i] - F_rest[i]) / (F_running[i] + F_rest[i]) for i in range(len(dF))]
     #--------------------------remove ROIs with LMI more than 1 or less than -1 ------------
-    in_RANGE_lmi = [i for i, val in enumerate(LMI) if abs(val) <= 1]
-    valid_cell_LMI[in_RANGE_lmi, 0] = 1
-    RAWF, _ = functions.detect_cell(valid_cell_LMI, RAWF)
-    F, _ = functions.detect_cell(valid_cell_LMI, F)
-    dF, _ = functions.detect_cell(valid_cell_LMI, dF)
-    F0, _ = functions.detect_cell(valid_cell_LMI, F0)
-    F_running , _ = functions.detect_cell(valid_cell_LMI, F_running)
-    F_NABMA , _ = functions.detect_cell(valid_cell_LMI, F_NABMA)
-    F_rest, _ = functions.detect_cell(valid_cell_LMI, F_rest)
-    z_scored_dF, _ = functions.detect_cell(valid_cell_LMI, z_scored_dF)
-    LMI, _ = functions.detect_cell(valid_cell_LMI, LMI)
+    not_in_RANGE_lmi = [i for i, val in enumerate(LMI) if abs(val) > 1]
+    if len(not_in_RANGE_lmi) != 0 :
+        valid_cell_LMI = np.ones((len(dF), 2))
+        valid_cell_LMI[not_in_RANGE_lmi, 0] = 0
+        RAWF, _ = functions.detect_cell(valid_cell_LMI, RAWF)
+        F, _ = functions.detect_cell(valid_cell_LMI, F)
+        dF, _ = functions.detect_cell(valid_cell_LMI, dF)
+        F0, _ = functions.detect_cell(valid_cell_LMI, F0)
+        F_running , _ = functions.detect_cell(valid_cell_LMI, F_running)
+        F_NABMA , _ = functions.detect_cell(valid_cell_LMI, F_NABMA)
+        F_rest, _ = functions.detect_cell(valid_cell_LMI, F_rest)
+        z_scored_dF, _ = functions.detect_cell(valid_cell_LMI, z_scored_dF)
+        LMI, _ = functions.detect_cell(valid_cell_LMI, LMI)
     mean_dF0 = np.mean(F0, 1)
     #-----------calculate Z scored states -----------
     Z_mean_F_Running = motion_state.mean_max_interval(z_scored_dF, states_window['run'],'mean')
@@ -254,18 +267,19 @@ if launch_processing :
     Sub_processd_syn = processd_group.create_group('synchrony')
     functions.creat_H5_dataset(behavioral_group,[speed, motion, pupil],['Speed', 'FaceMotion', 'Pupil'])
     functions.creat_H5_dataset(dF_Ca,[F0,mean_dF0,dF,z_scored_dF,RAWF,Fneu_raw1,spikes],['F0','Mean_F0','dF','Z_scored_F','F','Fneu','spikes'])
-    functions.creat_H5_dataset(mean_dF,[F_running, F_rest, F_NABMA], ['Running', 'Rest', 'paw_movement'])
     functions.creat_H5_dataset(Sub_processd_syn,[matrix_synchro, matrix_shuffled_synchrony], ['data_synchrony', 'shuffel_synchrony'])
-    functions.creat_H5_dataset(Zscored_Ca,[Z_mean_F_Running, Z_mean_F_rest, Z_mean_F_NABMA], ['Running', 'Rest', 'paw_movement'])
-    Time_group.create_dataset('Time', data= TIme)
+    functions.creat_H5_dataset(mean_dF,[F_running, F_rest, F_NABMA], ['Running', 'Rest', 'NABMA'])
+    functions.creat_H5_dataset(Zscored_Ca,[Z_mean_F_Running, Z_mean_F_rest, Z_mean_F_NABMA], ['Running', 'Rest', 'NABMA'])
+    Time_group.create_dataset('Time', data= real_time)
     Sub_processd_MI.create_dataset('Run_MI', data = LMI)
+    #------------------ Convolve ---------------
     if convolve:
         speed, motion, pupil = functions.convolve(Time, speed, motion, pupil,save_direction_figure)
     ########################################
     print("session contains", str(len(dF)), " neurons")
     num = np.arange(0, len(dF))
     leN = len(dF)
-    valid_neurons_speed, out_neurons_speed = functions.permutation(dF, filtered_speed,"speed", save_direction_permutation,permutation_sample)
+    valid_neurons_speed, out_neurons_speed = functions.permutation(dF, filtered_speed, "speed", real_time, save_direction_permutation, permutation_sample)
     if len(valid_neurons_speed) == 0 :
         raise Exception("Zero Neuron is valid after permutation test for speed and dF ")
     functions.creat_H5_dataset(ROIs_group,[keeped_ROI, valid_cell_LMI,valid_neurons_speed,out_neurons_speed]
@@ -274,16 +288,16 @@ if launch_processing :
     #------------------------------------------------- Correlation Calcolating ----------------------------------
     speed_corr = [pearsonr(speed, ROI)[0] for ROI in dF]
     Sub_processd_corr.create_dataset('Speed_corr',data = speed_corr)
-    dF_speed_correlation_sorted = [dF for speed_corr, dF in sorted(zip(speed_corr, dF))]
+    dF_speed_correlation_sorted = [dF for _, dF in sorted(zip(speed_corr, dF))]
     Normal_dF_speed_correlation_sorted = functions.Normal_df(dF_speed_correlation_sorted)
     #-------------------------------------------------------------Speed lag--------------------------------------
     if Do_lag :
-        valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme,valid_neurons_speed,save_direction0_lag,dF,speed,"speed",speed_corr)
+        valid_speed_lag, lag_mean_dF_speed = functions.lag(real_time,valid_neurons_speed,save_direction0_lag,dF,speed,"speed",speed_corr)
 
         Sub_processd_lag = processd_group.create_group('lag')
         functions.creat_H5_dataset(Sub_processd_lag,[valid_speed_lag, lag_mean_dF_speed],['speed_lag_valid_ROIs','lag_mean_dF_speed'])
     if Do_pupil:
-        valid_neurons_pupil, out_neurons_pupil = functions.permutation(dF, pupil,"pupil", save_direction_permutation, permutation_sample)
+        valid_neurons_pupil, out_neurons_pupil = functions.permutation(dF, pupil,"pupil", real_time, save_direction_permutation, permutation_sample)
         ROIs_group.create_dataset('Valid_Pupil', data = valid_neurons_pupil)
         figure.pie_plot('permutation test result(pupil)', save_direction_permutation, 'correlated neuron',
                         'uncorrelated neuron' ,len(valid_neurons_pupil), len(out_neurons_pupil))
@@ -294,7 +308,7 @@ if launch_processing :
         Mean_NABMA_pupil = motion_state.mean_interval(pupil, states_window['NABMA'], method='mean')
         Mean_rest_pupil = motion_state.mean_interval(pupil, states_window['rest'], method='mean')
         Mean_AS_pupil = motion_state.mean_interval(pupil, states_window['AS'], method='mean')
-        categories = ['Rest','paw_movement', 'Aroused_Stationary', 'Running']
+        categories = ['Rest','NABMA', 'Aroused_Stationary', 'Running']
         values = [Mean_rest_pupil, Mean_NABMA_pupil,Mean_AS_pupil, Mean_Running_pupil]
         functions.creat_H5_dataset(Sub_processd_PState, values, categories)
         M_active_pupil1 = leN * [Mean_Running_pupil]
@@ -302,9 +316,9 @@ if launch_processing :
         M_rest_pupil1 = leN * [Mean_rest_pupil]
         Max_AS_pupil1 = leN * [Mean_AS_pupil]
         #------------------------------------plot pupil-----------------------------------------------
-        figure.pupil_state(categories, values, save_direction_figure, 'mean pupil Zscored', 'pupil states',svg)
+        figure.pupil_state(categories, values, save_direction_figure, 'mean pupil Zscored', 'pupil states',SAVE_SVG)
         figure.scatter_plot(num, pupil_corr, out_neurons_pupil, save_direction_figure,
-            'pupil & F Correlation','Neuron','correlation', 'pass pupil P test', 'fail pupil P test',svg)
+            'pupil & F Correlation','Neuron','correlation', 'pass pupil P test', 'fail pupil P test',SAVE_SVG)
     else:
         Mean_rest_pupil= Mean_NABMA_pupil = Mean_AS_pupil = Mean_Running_pupil = None
         M_active_pupil1 = M_NABMA_pupil1 = M_rest_pupil1 = Max_AS_pupil1 = np.full(leN, np.nan)
@@ -325,18 +339,18 @@ if launch_processing :
     valid_MI = valid_processd_group.create_group('MI')
     valid_MI.create_dataset('Running_MI', data = Run_MI_valid1)
     functions.creat_H5_dataset(valid_Zscored_Ca,[mean_Running_dF_valid, mean_F_rest_speed_valid, mean_dF_NABMA_valid]
-                            ,['Running', 'Rest', 'paw_movement'])
+                            ,['Running', 'Rest', 'NABMA'])
     #-----------------------------------------------------
-    general_timing = TIme[-1] - TIme[0]
+    general_timing = real_time[-1] - real_time[0]
     RUN_TIME = motion_state.state_duration(Real_Time_states['run'])
     REST_TIME = motion_state.state_duration(Real_Time_states['rest'])
     only_paw_Time = motion_state.state_duration(Real_Time_states['NABMA'])
     AS_TIME = motion_state.state_duration(Real_Time_states['AS'])
     Run_percentage = (RUN_TIME/general_timing) * 100
-    figure.Time_pie(AS_TIME, RUN_TIME, REST_TIME, only_paw_Time, general_timing,save_direction_figure,svg)
+    figure.Time_pie(AS_TIME, RUN_TIME, REST_TIME, only_paw_Time, general_timing,save_direction_figure,SAVE_SVG)
 
     if DO_MOTION:
-        valid_neurons_face, out_neurons_face = functions.permutation(dF, filtered_motion,"motion", save_direction_permutation,permutation_sample)
+        valid_neurons_face, out_neurons_face = functions.permutation(dF, filtered_motion,"motion", real_time, save_direction_permutation,permutation_sample)
         functions.creat_H5_dataset(ROIs_group, [valid_neurons_face,out_neurons_face], ['Valid_Face','out_Face'])
         #--------------------------plot picture-----------------------
         figure.pie_plot('permutation test result(facemap)', save_direction_permutation, 'correlated neuron',
@@ -351,16 +365,16 @@ if launch_processing :
         Normal_dF_face_correlation_sorted = functions.Normal_df(dF_face_correlation_sorted)
         figure.histo_valid(valid_neurons_face, save_direction_figure, face_corr, "Face validity")
         figure.scatter_plot(num, mean_dF0, out_neurons_face, save_direction_figure,
-                            'F0_face', 'Neuron','mean F0', 'pass face P test', 'fail face P test',svg)
+                            'F0_face', 'Neuron','mean F0', 'pass face P test', 'fail face P test',SAVE_SVG)
         #----------------------------------------------------------
         F_AS = motion_state.mean_max_interval(dF, states_window['AS'], method='mean')
         Z_mean_F_AS = motion_state.mean_max_interval(z_scored_dF, states_window['AS'], method='mean')
         mean_dF.create_dataset('AS', data=F_AS)
         Whisking_TIME = AS_TIME + RUN_TIME + only_paw_Time
-        Whisking_percentage = (Whisking_TIME / TIme[-1])*100
+        Whisking_percentage = (Whisking_TIME / real_time[-1])*100
         #--------------------------------------------------------------------------
         if Do_lag:
-            valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag(TIme, valid_neurons_face,
+            valid_daceMo_lag, lag_mean_dF_facemotion = functions.lag(real_time, valid_neurons_face,
                                     save_direction0_lag, dF,motion, "face motion", face_corr)
             functions.creat_H5_dataset(Sub_processd_lag, [valid_daceMo_lag, lag_mean_dF_facemotion],
                                     ['FaceMotion_lag_valid_ROIs', 'lag_mean_dF_facemotion'])
@@ -377,11 +391,11 @@ if launch_processing :
             Zscored_Ca.create_dataset('Aroused_stationary',data = Z_mean_F_AS)
             figure.HistoPlot(AS_MI, 'Histo AS MI', save_direction_figure)
             figure.scatter_plot(num_AS, AS_MI, out_neurons_speed, save_direction_figure, 'AS MI',
-                    'Neuron', 'Aroused_stationary MI', 'pass speed P test', 'fail speed P test',svg)
+                    'Neuron', 'Aroused_stationary MI', 'pass speed P test', 'fail speed P test',SAVE_SVG)
         #-----------------------------------------plot face------------------------------------------
         figure.fit_plot(speed_corr, face_corr, save_direction_figure, 'Speed & facemotion','facemotion correlation','speed correlation')
         figure.scatter_plot(num, face_corr, out_neurons_face, save_direction_figure,
-                        'Facemotion & F Correlation', 'Neuron', 'correlation', 'pass face P test', 'fail face P test',svg)
+                        'Facemotion & F Correlation', 'Neuron', 'correlation', 'pass face P test', 'fail face P test',SAVE_SVG)
     else:
         Z_mean_F_AS = np.full(leN, np.nan)
         face_corr = np.full(leN, np.nan)
@@ -390,23 +404,23 @@ if launch_processing :
     Mean__dF = np.mean(dF, 0)
     num_LMI = np.arange(0, len(LMI))
     #------------------------------------Plot figure---------------------------------
-    figure.plot_running(TIme, speed, Real_Time_states['run'],filtered_speed,save_direction_figure,'Speed(cm/s)','Time(S)','speed.png',svg)
+    figure.plot_running(real_time, speed, Real_Time_states['run'],filtered_speed,save_direction_figure,'Speed(cm/s)','Time(S)','speed.png',SAVE_SVG)
     figure.histo_valid(valid_neurons_speed,save_direction_figure,speed_corr,"Speed validity")
     figure.HistoPlot(LMI, "H_Running LMI", save_direction_figure)
-    figure.scatter_plot(num,mean_dF0,out_neurons_speed,save_direction_figure,'F0_speed','Neuron', 'mean F0', 'pass speed P test', 'fail speed P test',svg)
-    figure.double_trace_plot(TIme,Mean__dF,speed, save_direction_figure,"Time(S)","Mean dF", "Speed","mean dF vs speed",svg)
-    figure.double_trace_plot(TIme,Mean__dF,motion, save_direction_figure,"Time(S)","Mean dF", "motion","mean dF vs facemotion",svg)
-    figure.double_trace_plot(TIme,Mean__dF,pupil, save_direction_figure,"Time(S)","Mean dF", "pupil","mean dF vs pupil",svg)
+    figure.scatter_plot(num,mean_dF0,out_neurons_speed,save_direction_figure,'F0_speed','Neuron', 'mean F0', 'pass speed P test', 'fail speed P test',SAVE_SVG)
+    figure.double_trace_plot(real_time,Mean__dF,speed, save_direction_figure,"Time(S)","Mean dF", "Speed","mean dF vs speed",SAVE_SVG)
+    figure.double_trace_plot(real_time,Mean__dF,motion, save_direction_figure,"Time(S)","Mean dF", "motion","mean dF vs facemotion",SAVE_SVG)
+    figure.double_trace_plot(real_time,Mean__dF,pupil, save_direction_figure,"Time(S)","Mean dF", "pupil","mean dF vs pupil",SAVE_SVG)
     figure.power_plot(Mean__dF,Fs,save_direction_figure)
-    figure.general_figure(TIme, pupil, speed, motion, Normal_dF_speed_correlation_sorted, save_direction_figure,"General.png")
+    figure.general_figure(real_time, pupil, speed, motion, Normal_dF_speed_correlation_sorted, save_direction_figure,"General.png")
     figure.scatter_plot(num,speed_corr, out_neurons_speed,save_direction_figure,'Speed & F Correlation','Neuron','correlation',
-                        'pass speed P test', 'fail speed P test',svg)
+                        'pass speed P test', 'fail speed P test',SAVE_SVG)
     figure.pie_plot('permutation test result(speed)', save_direction_permutation, 'correlated neuron',
                     'uncorrelated neuron',len(valid_neurons_speed), len(out_neurons_speed))
     figure.scatter_plot(F_rest,F_running, out_neurons_speed,save_direction_figure,
-                        'dF Run & dF Rest(LMI)', 'mean dF rest', 'mean dF run', 'pass speed P test', 'fail speed P test',svg)
+                        'dF Run & dF Rest(LMI)', 'mean dF rest', 'mean dF run', 'pass speed P test', 'fail speed P test',SAVE_SVG)
     figure.scatter_plot(num_LMI, LMI, out_neurons_speed, save_direction_figure,
-                        'Running LMI', 'Neuron', 'LMI', 'pass speed P test', 'fail speed P test',svg)
+                        'Running LMI', 'Neuron', 'LMI', 'pass speed P test', 'fail speed P test',SAVE_SVG)
 
     sp = np.copy(speed)
     sp[sp == 0] = 'nan'
@@ -435,7 +449,7 @@ if launch_processing :
     parameters = f"Date = {current_date}\n" \
                 f"Time = {current_time}\n" \
                 f"relative time base on xml:\nFirst Frame = {st_FA}\nLast frame = {end_FA}\n" \
-                f"first frame{TIme[0]}(s)\n last frame {TIme[-1]}(s)\n" \
+                f"first frame{real_time[0]}(s)\n last frame {real_time[-1]}(s)\n" \
                 f"Runnig Time = {RUN_TIME}\n Rest Time =  {REST_TIME}\n" \
                 f"Run percentage = {Run_percentage}\n Whisking Time =  {Whisking_TIME}\n" \
                 f"Whisking percentage = {Whisking_percentage}\n neuropil impact factor = {neuropil_impact_factor}\n" \
@@ -451,7 +465,7 @@ if launch_processing :
     #motion_state.kruskal_test(z_scored_dF, Running_window, NABMA_window, rest_window, AS_window, save_direction_figure)
     if Do_skew:
         mean_high_skew, mean_low_skew = skewness2.skewness(dF, threshold['skew'], save_direction_skew, ROIs_group, LMI,Z_mean_F_Running, Z_mean_F_NABMA,
-                Z_mean_F_AS,Z_mean_F_rest,speed_corr,face_corr,TIme, pupil, speed, motion,svg)
+                Z_mean_F_AS,Z_mean_F_rest,speed_corr,face_corr,real_time, pupil, speed, motion,SAVE_SVG)
     else:
         mean_high_skew = mean_low_skew = None
     hf.close()

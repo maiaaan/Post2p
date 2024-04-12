@@ -97,8 +97,9 @@ def randomizer(S):
     return random_S
 
 def get_average_rand_synchronicity(spikes, N_iterations, thr_spikes, w_size=10):
-    matrix_shuffled = np.array([synchrony(randomizer(spikes), thr_spikes, w_size=w_size) for n in tqdm(range(0, N_iterations))])
+    matrix_shuffled = np.array([synchrony(randomizer(spikes), thr_spikes, w_size=w_size) for n in tqdm(range(0, N_iterations), desc='shuffled synchrony')])
     return matrix_shuffled
+
 def plot_data(a, b, save_path, svg, ax=None):
     save_path2 = save_path + "\spike correlation.png"
     if ax is None:

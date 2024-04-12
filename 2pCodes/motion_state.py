@@ -10,6 +10,7 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from scipy.stats import kruskal
 import os.path
 from matplotlib.lines import Line2D
+import seaborn as sns
 
 def split_stages(motion, speed, real_time, threshold, min_states_window, filter_kernel):
     """
@@ -209,7 +210,7 @@ def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_wind
         ax[0].add_collection(LineCollection(line_seg_list[i],  colors=(colors_list[i]), alpha=alphas_list[i]))
 
     ax[0].set_ylim(min(filtered_F), max(filtered_F))
-    ax[0].set_ylabel('dF/F')
+    ax[0].set_ylabel(r'$\Delta$F/F')
     ax[0].set_xticks([])
     ax[0].margins(x=0)
     
@@ -281,7 +282,7 @@ def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_wind
     fig, axs = plt.subplots(3, 1, figsize=(15, 5))
     # Create a basic plot
     axs[0].plot(real_time, filtered_F, color=c)
-    axs[0].set_ylabel('dF/F')
+    axs[0].set_ylabel(r'$\Delta$F/F')
     axs[0].margins(x=0)
     axs[1].set_xticks([])
 
@@ -389,7 +390,7 @@ def kruskal_test(valid_neuron,active_movement_window2, inactive_window, rest_win
     ax.set_xticks([1, 2, 3, 4])
     ax.set_xticklabels(['Rest','paw Movement', 'As', 'Running'])
     ax.set_ylabel('mean')
-    ax.set_title('z-scored dF/F')
+    ax.set_title(r'z-scored $\Delta$F/F')
     if svg == True:
         save_direction_svg = os.path.join(save_direction,"activity_B_states.svg")
         fig.savefig(save_direction_svg,format = 'svg')

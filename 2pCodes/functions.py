@@ -12,6 +12,7 @@ from sklearn.linear_model import LinearRegression
 from scipy.signal import convolve
 import bottleneck as bn
 from scipy.ndimage import gaussian_filter1d
+import seaborn as sns
 
 def detect_cell(cell, F):
     removed_ROI = [i for i, c in enumerate(cell) if c[0] == 0]
@@ -64,11 +65,11 @@ def interpolation1(sampel_data_for_interpolation, data_for_interpolating):
     print("data for ",h," were interpolated")
     return data_for_interpolating
 
-def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
+def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, pearson_corr):
     length = len(X)
     step = t_imaging[-1] / length
     freq = length / t_imaging[-1]
-    l = -length + 1
+    l = -length + 1/2
     time_corr = np.arange(l / freq, length / freq, step)
     Time = np.linspace(0, t_imaging[-1], length)
     plot_duration = int(20 / step)
@@ -84,7 +85,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
             correlation = correlate(X, dF[i])
             correlation = correlation.tolist()
             interested_zone = correlation[sstart:eend]
-            if speed_corr[i] >= 0:
+            if pearson_corr[i] >= 0:
                 positive_dF.append(dF[i])
                 max_lagI = max(interested_zone)
                 Max_index = interested_zone.index(max_lagI)
@@ -93,20 +94,24 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
                 all_lag.append(lagI)
                 gs = gridspec.GridSpec(6, 1)
                 fig1 = plt.figure(figsize=(14, 7))
+                fig1.suptitle(f'ROI {i}')
                 ax2 = plt.subplot(gs[0:4, 0])
                 ax1 = plt.subplot(gs[4, 0])
                 ax3 = plt.subplot(gs[5, 0])
+
+                ax2.plot(time_corr[start:end], correlation[start:end], label="correlation")
+                ax2.set_title(r'$\Delta$F/F and ' + label + " correlation", fontsize=11)
+                ax2.set_yticks([])
+                ax2.axvline(lagI, color='plum', linestyle='dashed', linewidth=1.5)
+                ax2.annotate(r'$lag_{max\_corr} = $'  + f'{lagI:.3f} s', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
+                             ha='left')
+                
+                ax1.plot(Time, dF[i], label=r'$\Delta$F/F', color="pink")
+                ax1.set_yticks([])
                 ax3.plot(Time, X, label=label, color="teal")
                 ax3.set_xlabel('Time(s)')
                 ax3.set_yticks([])
-                ax1.plot(Time, dF[i], label="dF ROI " + str(i), color="pink")
-                ax1.set_xticks([])
-                ax1.set_yticks([])
-                ax2.plot(time_corr[start:end], correlation[start:end], label="correlation")
-                ax2.set_title("dF and " + label + " correlation", fontsize=11)
-                ax2.axvline(0, color='plum', linestyle='dashed', linewidth=1.5, label='0')
-                ax2.annotate(f'lag(s) =  {lagI:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
-                             ha='left')
+
                 ax2.margins(x=0)
                 ax1.margins(x=0)
                 ax3.margins(x=0)
@@ -138,25 +143,26 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, speed_corr):
     lag_mean_pos = (max_index_mean_pos - corr_interval-1) / freq
 
     fig = plt.figure(figsize=(11, 11))
+    fig.suptitle(r"$\Delta$F/F- " + label + " Lag Analysis")
     gs = gridspec.GridSpec(2, 1, height_ratios=[3, 1])
     ax = fig.add_subplot(gs[0])
     ax2 = fig.add_subplot(gs[1])
-    ax.hist(all_lag, weights=(np.ones(len(all_lag)) / len(all_lag)) * 100, bins=25, alpha=0.5, label='all ROIs lag')
+    ax.hist(all_lag, weights=(np.ones(len(all_lag)) / len(all_lag)) * 100, bins=25, alpha=0.5)
     median = np.median(all_lag)
     ax.axvline(median, color="teal", linestyle='dashed', linewidth=1.5, label='median')
-    ax.set_xlabel('lag for mean dF all ROIs')
-    ax.set_ylabel('Percentage')
-    ax.set_title("dF- " + label + " lag")
+    ax.set_xlabel('Lag (in s)')
+    ax.set_ylabel('Count in %')
     ax.legend()
-    ax2.plot(time_corr[start:end], positive_correlation_mean[start:end], alpha=0.7, label='mean dF lag')
-    ax2.axvline(lag_mean_pos, color='red', linestyle='dashed', linewidth=1.5, label='mean lag')
-    ax2.set_yticks([])
 
+    ax2.plot(time_corr[start:end], positive_correlation_mean[start:end], alpha=0.7, label=r'correlation of mean $\Delta$F/F')
+    ax2.axvline(lag_mean_pos, color='red', linestyle='dashed', linewidth=1.5, label=r'$lag_{max\_corr}$')
+    ax2.set_yticks([])
     ax2.margins(x=0)
-    ax2.annotate(f'mean dF correlation (s) =  {lag_mean_pos:.3f}', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
+    ax2.annotate(r'$lag_{max\_corr}$ = ' + f'{lag_mean_pos:.3f} s', xy=(0.01, 0.98), xycoords='axes fraction', fontsize=9, va='top',
                  ha='left')
     ax2.legend(loc='upper right', fontsize='small')
     ax2.set_ylabel('correlation')
+    ax2.set_xlabel('Time (in s)')
 
     file_name003 = "all ROIs lag( " + label + " )"
     save_direction003 = os.path.join(save_direction03, file_name003)
@@ -174,7 +180,9 @@ def detect_bad_neuropils(detected_roi,neuropil, F,iscell ,direction):
         #np.save(direction, iscell, allow_pickle=True)
     return iscell, neuron_chosen3
 
-def permutation(dF, speed,label, save_direction202,samples = 1000):
+def permutation(dF, speed, label, real_time, save_direction202, samples = 1000):
+    sns.set_theme()
+
     label2 = label + " permutation Processing"
     dF_p = copy.deepcopy(dF)
     speed_p = speed/np.max(speed)
@@ -194,21 +202,24 @@ def permutation(dF, speed,label, save_direction202,samples = 1000):
 
         ax.clear()
         ax2.clear()
+        fig.suptitle(f'ROI {s}')
         ax.hist(permuted_corrs, weights=weights * 100, bins=30, alpha=0.5, label='Permutations')
         ax.axvline(real_corr, color='red', linestyle='dashed', linewidth=2, label='Observed')
         ax.set_xlabel('Correlation Coefficient')
         ax.set_ylabel('Percentage')
-        ax.set_title(f'Permutation Test({label})')
+        ax.set_title(f'Permutation Test ({label})')
         ax.legend(loc='upper right', fontsize='small')
         ax.annotate(f'p-value = {p_value:.3f}', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=9,
                     va='top', ha='left')
 
-        ax2.plot(dF_p[s], label='dF')
-        ax2.set_ylabel(f'ROI {s}')
-        ax2.plot(speed_p, alpha=0.7, label=label)
+        ax2.plot(real_time, gaussian_filter1d(dF_p[s], 10), label=r'$\Delta$F/F')
+        #ax2.set_ylabel(f'ROI {s}')
+        ax2.plot(real_time, speed_p, alpha=0.7, label=label)
         ax2.set_yticks([])
         ax2.margins(x=0)
+        ax2.set_xlabel('Time(s)')
         ax2.legend(loc='upper right', fontsize='small')
+        plt.tight_layout(h_pad=1.5)
 
         file_name = f'ROI {s} {label} Permutation'
         save_direction = os.path.join(save_direction202, file_name)
@@ -223,6 +234,7 @@ def permutation(dF, speed,label, save_direction202,samples = 1000):
 
     plt.close(fig)
     return valid_neurons, out_neurons
+
 def calculate_alpha (F, Fneu):
     Slope = []
     per = np.arange(5,101,5)
@@ -312,6 +324,7 @@ def save_data(file_name, save_dir, data):
         pass
     else:
         np.save(save_direction, data, allow_pickle=True)
+
 def save_fig(fig_name, save_dir, fig):
     save_direction = os.path.join(save_dir, fig_name)
     fig.savefig(save_direction)
