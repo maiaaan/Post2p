@@ -71,7 +71,7 @@ def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Ru
             ['Z_mean_Running','Z_mean_paw', 'Z_mean_AS', 'Z_mean_rest'], variable2):
         not_skew_variable[var_name] = functions.detect_valid_neurons(low_skew, var)
     #_______________________save skew data h5_________________
-    H5_dir_skew =os.path.join(save_direction_skew, "skewdata.h5")
+    H5_dir_skew = os.path.join(save_direction_skew, "skewdata.h5")
     hf_skew = h5py.File(H5_dir_skew, 'w')
     skew_Ca_pre_group = hf_skew.create_group('Ca_data')
     skew_processd_group = hf_skew.create_group('processed_data')
@@ -104,16 +104,17 @@ def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Ru
     columns_skew = [(f'{t}{i}') for i in high_skew]
     sp = np.copy(speed)
     sp[sp == 0] = 'nan'
-    speed_mean_skew = Num_highSkew* [np.nanmean(sp)]
+    speed_mean_skew = Num_highSkew * [np.nanmean(sp)]
     df_skew = pd.DataFrame(
         [skew_variables['LMI'], speed_mean_skew, skew_variables['Z_mean_Running'],skew_variables['Z_mean_paw'],
-         skew_variables['Z_mean_rest'], skew_variables['speed_corr'], skew_variables['face_corr'], high_skew],
-        index=['Run MI', 'Mean speed','Mean z run', 'Mean z paw movement', 'Mean Z rest',
+         skew_variables['Z_mean_rest'],skew_variables['Z_mean_AS'], skew_variables['speed_corr'], skew_variables['face_corr'], skewness_high_skew],
+        index=['Run MI', 'Mean speed','Mean z run', 'Mean z paw movement', 'Mean z rest', 'Mean z AS'
                'Speed corr', 'Face corr', 'Skewness'], columns=columns_skew).T
     functions.save_exel('skew_variable.xlsx', save_direction_skew, df_skew)
-    #_______________________plot skew Data __________________________
-    Label1 = 'Skew < ' + str(threshold)
-    Label2 = 'Skew > ' + str(threshold)
+    #_______________________________________ plot skew Data ________________________________
+    Label1 = 'Skew > ' + str(threshold)
+    Label2 = 'Skew < ' + str(threshold)
+
     figure.box_plot(skew_variables['Z_mean_Running'], skew_variables['Z_mean_rest'], not_skew_variable['Z_mean_Running'],
                     not_skew_variable['Z_mean_rest'], 'Srun', 'Srest', 'NSrun',
                     "NSrest", "skew_notSkew_activity", 'z-scored dF/F', '', save_direction_skew,svg)
@@ -123,7 +124,7 @@ def skewness(dF, threshold:float, save_direction_skew, ROIs_group, LMI,Z_mean_Ru
                  Label1, Label2,svg, color1='red', color2 = 'mediumpurple')
 
     NUM_LMI = np.arange(0, len(LMI))
-    figure.scatter_plot(NUM_LMI,speed_corr, high_skew,save_direction_skew, 'LMI','Neuron', 'LMI',
+    figure.scatter_plot(NUM_LMI,LMI, high_skew,save_direction_skew, 'LMI','Neuron', 'LMI',
                         Label1,Label2,svg, color1='red', color2 = 'mediumpurple')
 
     not_skew = len(dF)- Num_highSkew

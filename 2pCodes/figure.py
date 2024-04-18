@@ -109,7 +109,7 @@ def scatter_plot(NUM,y, chosen_neurons,save_direction_figure, label:str, xlabel:
     NUM_color = np.arange(0, len(NUM))
     fig_label = label + ".png"
     fig = plt.figure(figsize=(14, 6))
-    colors = np.where(np.in1d(NUM_color, chosen_neurons), 'red', 'lightgreen')
+    colors = np.where(np.in1d(NUM_color, chosen_neurons), color1, color2)
     plt.scatter(NUM, y, s=100, c=colors)
     plt.xlabel(xlabel, fontsize=15, labelpad=10)
     plt.ylabel(ylabel, fontsize=15, labelpad=10)
@@ -141,12 +141,12 @@ def GUIimage(time, trace, figure_path, title):
     fig.savefig(fig_path, bbox_inches='tight', pad_inches=0, transparent=True)
     plt.close(fig)
 
-def pie_plot(fig_title, save_direction, label1, label2, data_size1, data_size2):
+def pie_plot(fig_title, save_direction, label1, label2, data_size1, data_size2, color1 = 'mediumpurple', color2 = 'plum'):
     title = fig_title + ".png"
     fig = plt.figure(figsize=(7, 5))
     labels = [label1, label2]
     sizes = [data_size1, data_size2]
-    colors = ['mediumpurple', 'plum']
+    colors = [color1, color2]
     plt.pie(sizes, labels=[f'{label} ({size})' for label, size in zip(labels, sizes)], colors=colors,
             autopct='%1.1f%%')
     plt.title(fig_title)
