@@ -3,8 +3,15 @@ from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QFileDialog
 import os
+from DetectRedGUI import MainWindow, CustomGraphicsView_green, CustomGraphicsView_red
+import RedCell_functions
+import functions
+import os.path
+import numpy as np
+import sys
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow, figure_path, LenData):
+    def setupUi(self, MainWindow, figure_path, LenData, cell_info= None, Green_Cell= None,
+                background_image_path= None):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(580, 775)
         MainWindow.setStyleSheet("background-color: rgb(27, 27, 27);")
@@ -52,6 +59,11 @@ class Ui_MainWindow(object):
         self.syn_itter = 10
         self.alpha = 0.7
         self.motion_th = 2
+        self.currentRedObjects = int
+        self.currentGreenObject = int
+        self.background_image_path = background_image_path
+        self.Green_Cell = Green_Cell
+        self.cell_info = cell_info
         self.mean_F_image = os.path.join(figure_path, "raw_mean_F.png")
         self.Pupil_image = os.path.join(figure_path, "pupil.png")
         self.facemotion_image = os.path.join(figure_path, "raw_face_motion.png")
@@ -196,6 +208,9 @@ class Ui_MainWindow(object):
         self.Convolve_checkBox = QtWidgets.QCheckBox(self.tabsetting)
         self.Convolve_checkBox.setObjectName("Convolve_checkBox")
         self.verticalLayout_5.addWidget(self.Convolve_checkBox)
+        self.redA_checkBox = QtWidgets.QCheckBox(self.tabsetting)
+        self.redA_checkBox.setObjectName("Red channel")
+        self.verticalLayout_5.addWidget(self.redA_checkBox)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem)
         #------------------------------------------
@@ -203,6 +218,10 @@ class Ui_MainWindow(object):
         self.Metadata_push.setObjectName("pushButton")
         self.Metadata_push.clicked.connect(self.get_Metadata)
         self.verticalLayout_5.addWidget(self.Metadata_push)
+        self.second_ch_push = QtWidgets.QPushButton(self.tabsetting)
+        self.second_ch_push.setObjectName("pushButton")
+        self.second_ch_push.clicked.connect(self.get_second_ch)
+        self.verticalLayout_5.addWidget(self.second_ch_push)
         #----------------------------------------
         self.savesetting_pushButton = QtWidgets.QPushButton(self.tabsetting)
         self.savesetting_pushButton.setObjectName("pushButton")
@@ -550,6 +569,18 @@ class Ui_MainWindow(object):
 
     def get_generate_svg_state(self):
         return self.generate_figure_checkBox.isChecked()
+    def get_red_state(self):
+            return self.redA_checkBox.isChecked()
+    def get_second_ch(self):
+            if not self.background_image_path:
+                    print("no background image found")
+                    self.show_warning_popup("No red.tif was founf in the directory")
+            else:
+                    main_window = MainWindow(self.cell_info, self.Green_Cell, self.background_image_path)
+                    main_window.show()
+                    self.currentRedObjects = main_window.currentRedObjects
+                    self.currentGreenObject = main_window.currentGreenObjects
+            return self.currentRedObjects, self.currentGreenObject
 
 
     def retranslateUi(self, MainWindow):
@@ -590,8 +621,10 @@ class Ui_MainWindow(object):
         self.label_alpha_factor.setText(_translate("MainWindow", "Alpha factor"))
         self.generate_figure_checkBox.setText(_translate("MainWindow", "Generate figure"))
         self.Convolve_checkBox.setText(_translate("MainWindow", "Convolve data"))
+        self.redA_checkBox.setText(_translate("Mainwindow", "Analyze red channel"))
         self.savesetting_pushButton.setText(_translate("MainWindow", "Save change"))
         self.Metadata_push.setText(_translate("MainWindow", "Upload Metadata"))
+        self.second_ch_push.setText(_translate("MainWindow", "Show Second Channel"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.tabsetting), _translate("MainWindow", "setting"))
         self.label_mean_F.setText(_translate("MainWindow", "Mean Fluorescence trace"))
         self.label_pupil.setText(_translate("MainWindow", "Pupil trace"))
@@ -632,4 +665,35 @@ class Ui_MainWindow(object):
         self.pushButton_co_directory.setText(_translate("MainWindow", "compile directory"))
         self.pushButton_OK.setText(_translate("MainWindow", "OK"))
         self.tabGeneral.setTabText(self.tabGeneral.indexOf(self.General), _translate("MainWindow", "General"))
-
+#
+# figure_path = r"G:\TO ANALYSE\veh vs win_BY CELLS\Sncg line_PYR\101123Win\TSeries-11102023-nomark-004\Results2.6.3_TSeries-11102023-nomark-004\Figures"
+# LenData = 8000
+# save_red_results = r"F:\VIP_CB1 td Tom\VIP_2_FOD_male\220223\TSeries-02222023-mouse2-001\suite2p\plane0\save"
+# Base_path = r"F:\VIP_CB1 td Tom\VIP_2_FOD_male\220223\TSeries-02222023-mouse2-001"
+#
+#
+#
+#
+#
+# cell_info = Green_Cell = image_path = None
+#
+# class MyWindow(QtWidgets.QMainWindow):
+#     def __init__(self,figure_path, LenData, cell_info, Green_Cell, image_path):
+#         super().__init__()
+#         self.ui = Ui_MainWindow()
+#         self.ui.setupUi(self,figure_path, LenData, cell_info, Green_Cell, image_path)
+#
+# if __name__ == "__main__":
+#    # suite2p_path, ops, Mean_image, cell, stat, single_red = RedCell_functions.loadred(Base_path)
+#    # image_path = os.path.join(save_red_results, "grey_image.jpg")
+#    # cell_info, _ = functions.detect_cell(cell, stat)
+#    # separete_masks = RedCell_functions.single_mask(ops, cell_info)
+#    # thresh = RedCell_functions.DetectRedCellMask(Base_path, save_red_results, min_area=35, max_area=150)
+#    # only_green_mask, only_green_cell, comen_cell, KeepMask, blank2 = \
+#    #              RedCell_functions.select_mask(save_red_results, thresh, separete_masks, cell_true=2)
+#    # Green_Cell = np.ones((len(cell_info), 2))
+#    # Green_Cell[comen_cell, 0] = 0
+#    app = QtWidgets.QApplication(sys.argv)
+#    window = MyWindow(figure_path, LenData, cell_info, Green_Cell, image_path)
+#    window.show()
+#    app.exec_()

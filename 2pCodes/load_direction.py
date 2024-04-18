@@ -13,17 +13,19 @@ def get_directory():
     tail2 = f"Results2.7_{tail}"
     save_direction1 = functions.make_dir(Base_path, tail2)
     save_direction_figure = functions.make_dir(save_direction1, "Figures")
+    save_red_results = functions.make_dir(save_direction1, "red_ch")
     save_data = functions.make_dir(save_direction1, "data")
     H5_dir = os.path.join(save_data, "AllData.h5")
     hf = h5py.File(H5_dir, 'w')
     save_direction_permutation = functions.make_dir(save_direction1, "permutation_test")
     save_direction0_lag = functions.make_dir(save_direction1, "lag")
     save_direction_skew = functions.make_dir(save_direction1, "skewness")
+    Red_image_dir = os.path.join(Base_path, "red.tif")
     suite2p_path = os.path.join(Base_path, "suite2p", "plane0")
     xml_direction = glob.glob(os.path.join(Base_path, '*.xml'))[0]
     facemap_path = glob.glob(os.path.join(Base_path, '*proc.npy'))[0]
     return Base_path,save_data, save_direction1, save_direction_figure,save_direction_permutation\
-        , save_direction0_lag, save_direction_skew, suite2p_path, facemap_path, xml_direction, hf
+        , save_direction0_lag, save_direction_skew, suite2p_path, facemap_path, xml_direction, hf, Red_image_dir, save_red_results
 
 def load_data(suite2p_path, Base_path,facemap_path):
     # Load suite2p data

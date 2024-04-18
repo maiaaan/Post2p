@@ -21,12 +21,14 @@ import skewness2
 import load_direction
 from GUI2 import Ui_MainWindow
 from openpyxl import load_workbook
+import Red_analyze
+import RedCell_functions
 # get date
 current_date = datetime.date.today()
 current_time = datetime.datetime.now().time()
 # -----------------------------------Build directory and load data---------------------------
 Base_path, save_data,save_direction1, save_direction_figure, save_direction_permutation,save_direction0_lag,\
-    save_direction_skew, suite2p_path, facemap_path, xml_direction, hf = load_direction.get_directory()
+    save_direction_skew, suite2p_path, facemap_path, xml_direction, hf, Red_image_dir, save_red_results = load_direction.get_directory()
 cell, F, Fneu_raw, spikes, movement_file, pupil, motion = load_direction.load_data(suite2p_path, Base_path,facemap_path)
 xml, channel_number, laserWavelength, objectiveLens, objectiveLensMag, opticalZoom,\
         bitDepth, dwellTime, framePeriod, micronsPerPixel, TwophotonLaserPower = load_direction.load_xml(xml_direction)
@@ -55,21 +57,41 @@ print("TIM", len(TIM))
 figure.GUIimage(TIM, motion, save_direction_figure, "raw_face_motion.png")
 figure.GUIimage(TIM, pupil, save_direction_figure, "pupil.png")
 figure.GUIimage(TIM, Mean_raw_F,save_direction_figure,"raw_mean_F.png")
+print("save_red_results:", save_red_results)
+# --------------------------Load Second channel data --------------------------
+red_tif_exist = os.path.exists(Red_image_dir)
+if red_tif_exist:
+    print("exist")
+    suite2p_path, ops, Mean_image, cell, stat, single_red = RedCell_functions.loadred(Base_path)
+    gray_image_dir = os.path.join(save_red_results, "grey_image.jpg")
+    cell_info, _ = functions.detect_cell(cell, stat)
+    separete_masks = RedCell_functions.single_mask(ops, cell_info)
+    thresh = RedCell_functions.DetectRedCellMask(Base_path, save_red_results, min_area=35, max_area=150)
+    only_green_mask, only_green_cell, comen_cell, KeepMask, blank2 = \
+        RedCell_functions.select_mask(save_red_results, thresh, separete_masks, cell_true=2)
+    Green_Cell = np.ones((len(cell_info), 2))
+    Green_Cell[comen_cell, 0] = 0
+else:
+    None
+    Green_Cell = None
+    gray_image_dir = None
+    cell_info = None
+
+
 #----------------------------------Load GUI-----------------------------------
 class MyWindow(QtWidgets.QMainWindow):
-    def __init__(self, image_file, data_file):
+    def __init__(self,save_direction_figure, len_data, cell_info, Green_Cell, gray_image_dir):
         super().__init__()
         self.ui = Ui_MainWindow()
-        self.ui.setupUi(self,save_direction_figure, len_data)
+        self.ui.setupUi(self,save_direction_figure, len_data, cell_info, Green_Cell, gray_image_dir)
 if __name__ == "__main__":
-
     app = QtWidgets.QApplication(sys.argv)
-    data_path = len_data
-    figure_path = save_direction_figure
-    window = MyWindow(save_direction_figure, len_data)
+    window = MyWindow(save_direction_figure, len_data, cell_info, Green_Cell, gray_image_dir)
     window.show()
     app.exec_()
 #-----------------------------Get data from GUI---------------------------------
+green = window.ui.currentGreenObject
+red = window.ui.currentRedObjects
 upload_metadata = window.ui.upload_metadata
 generate_metadata = window.ui.get_generate_metadata()
 if upload_metadata:
@@ -109,9 +131,11 @@ else:
             file.write(json.dumps(metadata, indent=4))
 
 compile_directory = window.ui.directory
+print("compile_directory = ", compile_directory)
 DO_MOTION = window.ui.get_face_state()
 Do_pupil = window.ui.get_pupil_state()
 convolve = window.ui.get_convolve_state()
+red = window.ui.get_red_state()
 svg = window.ui.get_generate_svg_state()
 neuropil_impact_factor = window.ui.alpha
 Do_lag = window.ui.get_lag_state()
@@ -262,15 +286,15 @@ leN = len(dF)
 valid_neurons_speed, out_neurons_speed = functions.permutation(dF, filtered_speed,"speed", save_direction_permutation,permutation_sample)
 if len(valid_neurons_speed) == 0 :
     raise Exception("Zero Neuron is valid after permutation test for speed and dF ")
-functions.creat_H5_dataset(ROIs_group,[keeped_ROI, valid_cell_LMI,valid_neurons_speed,out_neurons_speed]
-                           , ['ROI_order_suite2p', 'Valid_LMI','Valid_Speed','Out_speed'])
+functions.creat_H5_dataset(ROIs_group,[keeped_ROI, valid_cell_LMI,valid_neurons_speed,out_neurons_speed,only_green_cell, comen_cell]
+                           , ['ROI_order_suite2p', 'Valid_LMI','Valid_Speed','Out_speed', 'Only_green', 'Red_Green'])
 percentage_valid_sp = (len(valid_neurons_speed)/len(dF)) * 100
-#------------------------------------------------- Correlation Calcolating ----------------------------------
+#--------------------------------------------- Correlation Calcolating -------------------------------------
 speed_corr = [pearsonr(speed, ROI)[0] for ROI in dF]
 Sub_processd_corr.create_dataset('Speed_corr',data = speed_corr)
 dF_speed_correlation_sorted = [dF for speed_corr, dF in sorted(zip(speed_corr, dF))]
 Normal_dF_speed_correlation_sorted = functions.Normal_df(dF_speed_correlation_sorted)
-#-------------------------------------------------------------Speed lag--------------------------------------
+#-------------------------------------------------------Speed lag-------------------------------------------
 if Do_lag :
     valid_speed_lag, lag_mean_dF_speed = functions.lag(TIme,valid_neurons_speed,save_direction0_lag,dF,speed,"speed",speed_corr)
 
@@ -298,7 +322,7 @@ if Do_pupil:
     #------------------------------------plot pupil-----------------------------------------------
     figure.pupil_state(categories, values, save_direction_figure, 'mean pupil Zscored', 'pupil states',svg)
     figure.scatter_plot(num, pupil_corr, out_neurons_pupil, save_direction_figure,
-        'pupil & F Correlation','Neuron','correlation', 'pass pupil P test', 'fail pupil P test',svg)
+        'pupil & F Correlation','Neuron','correlation','pass pupil P test','fail pupil P test',svg)
 else:
     Mean_rest_pupil= Mean_NABMA_pupil = Mean_AS_pupil = Mean_Running_pupil = None
     M_active_pupil1 = M_NABMA_pupil1 = M_rest_pupil1 = Max_AS_pupil1 = np.full(leN, np.nan)
@@ -345,7 +369,7 @@ if DO_MOTION:
     Normal_dF_face_correlation_sorted = functions.Normal_df(dF_face_correlation_sorted)
     figure.histo_valid(valid_neurons_face, save_direction_figure, face_corr, "Face validity")
     figure.scatter_plot(num, mean_dF0, out_neurons_face, save_direction_figure,
-                        'F0_face', 'Neuron','mean F0', 'pass face P test', 'fail face P test',svg)
+                        'F0_face', 'Neuron','mean F0', 'fail face P test', 'pass face P test',svg)
     #----------------------------------------------------------
     F_AS = motion_state.mean_max_interval(dF, AS_window, method='mean')
     Z_mean_F_AS = motion_state.mean_max_interval(z_scored_dF, AS_window, method='mean')
@@ -371,11 +395,11 @@ if DO_MOTION:
         Zscored_Ca.create_dataset('Aroused_stationary',data = Z_mean_F_AS)
         figure.HistoPlot(AS_MI, 'Histo AS MI', save_direction_figure)
         figure.scatter_plot(num_AS, AS_MI, out_neurons_speed, save_direction_figure, 'AS MI',
-                'Neuron', 'Aroused_stationary MI', 'pass speed P test', 'fail speed P test',svg)
+                'Neuron', 'Aroused_stationary MI','fail speed P test', 'pass speed P test',svg)
     #-----------------------------------------plot face------------------------------------------
     figure.fit_plot(speed_corr, face_corr, save_direction_figure, 'Speed & facemotion','facemotion correlation','speed correlation')
     figure.scatter_plot(num, face_corr, out_neurons_face, save_direction_figure,
-                    'Facemotion & F Correlation', 'Neuron', 'correlation', 'pass face P test', 'fail face P test',svg)
+                    'Facemotion & F Correlation', 'Neuron', 'correlation', 'fail face P test','pass face P test',svg)
 else:
     Z_mean_F_AS = np.full(leN, np.nan)
     face_corr = np.full(leN, np.nan)
@@ -387,20 +411,20 @@ num_LMI = np.arange(0, len(LMI))
 figure.plot_running(TIme, speed, Real_Time_Running,filtered_speed,save_direction_figure,'Speed(cm/s)','Time(S)','speed.png',svg)
 figure.histo_valid(valid_neurons_speed,save_direction_figure,speed_corr,"Speed validity")
 figure.HistoPlot(LMI, "H_Running LMI", save_direction_figure)
-figure.scatter_plot(num,mean_dF0,out_neurons_speed,save_direction_figure,'F0_speed','Neuron', 'mean F0', 'pass speed P test', 'fail speed P test',svg)
+figure.scatter_plot(num,mean_dF0,out_neurons_speed,save_direction_figure,'F0_speed','Neuron', 'mean F0','fail speed P test', 'pass speed P test',svg)
 figure.double_trace_plot(TIme,Mean__dF,speed, save_direction_figure,"Time(S)","Mean dF", "Speed","mean dF vs speed",svg)
 figure.double_trace_plot(TIme,Mean__dF,motion, save_direction_figure,"Time(S)","Mean dF", "motion","mean dF vs facemotion",svg)
 figure.double_trace_plot(TIme,Mean__dF,pupil, save_direction_figure,"Time(S)","Mean dF", "pupil","mean dF vs pupil",svg)
 figure.power_plot(Mean__dF,Fs,save_direction_figure)
 figure.general_figure(TIme, pupil, speed, motion, Normal_dF_speed_correlation_sorted, save_direction_figure,"General.png")
-figure.scatter_plot(num,speed_corr, out_neurons_speed,save_direction_figure,'Speed & F Correlation','Neuron','correlation',
-                    'pass speed P test', 'fail speed P test',svg)
+figure.scatter_plot(num,speed_corr, out_neurons_speed,save_direction_figure,'Speed & F Correlation','Neuron','correlation','fail speed P test',
+                    'pass speed P test',svg)
 figure.pie_plot('permutation test result(speed)', save_direction_permutation, 'correlated neuron',
                 'uncorrelated neuron',len(valid_neurons_speed), len(out_neurons_speed))
 figure.scatter_plot(F_rest,F_running, out_neurons_speed,save_direction_figure,
-                    'dF Run & dF Rest(LMI)', 'mean dF rest', 'mean dF run', 'pass speed P test', 'fail speed P test',svg)
+                    'dF Run & dF Rest(LMI)', 'mean dF rest', 'mean dF run','fail speed P test', 'pass speed P test',svg)
 figure.scatter_plot(num_LMI, LMI, out_neurons_speed, save_direction_figure,
-                    'Running LMI', 'Neuron', 'LMI', 'pass speed P test', 'fail speed P test',svg)
+                    'Running LMI', 'Neuron', 'LMI','fail speed P test','pass speed P test', svg)
 
 sp = np.copy(speed)
 sp[sp == 0] = 'nan'
@@ -443,6 +467,14 @@ save_direction_text = os.path.join(save_data , "parameters.text")
 with open(save_direction_text, 'a') as file:
         file.write(parameters + '\n')
 #motion_state.kruskal_test(z_scored_dF, Running_window, NABMA_window, rest_window, AS_window, save_direction_figure)
+if red:
+
+    Red_analyze.red_analyze(comen_cell, only_green_cell, save_red_results, dF, LMI, Z_mean_F_Running, Z_mean_F_NABMA,
+                Z_mean_F_AS, Z_mean_F_rest, speed_corr, face_corr,pupil_corr, TIme, pupil, speed, motion, svg, DO_MOTION)
+else:
+    print("No red")
+
+
 if Do_skew:
     mean_high_skew, mean_low_skew = skewness2.skewness(dF,skew_threshold, save_direction_skew, ROIs_group, LMI,Z_mean_F_Running, Z_mean_F_NABMA,
              Z_mean_F_AS,Z_mean_F_rest,speed_corr,face_corr,TIme, pupil, speed, motion,svg)
@@ -450,50 +482,54 @@ else:
     mean_high_skew = mean_low_skew = None
 hf.close()
 #------------------------------------- Compile data --------------------------------
-M_Run_LMI = np.nanmean(LMI)
-M_Zscored_F_Run = np.nanmean(Z_mean_F_Running)
-M_Zscored_F_PM = np.nanmean(Z_mean_F_NABMA)
-M_Zscored_F_Rest = np.nanmean(Z_mean_F_rest)
-M_Zscored_F_AS = np.nanmean(Z_mean_F_AS)
-M_speed_corr = np.nanmean(speed_corr)
-M_face_corr = np.nanmean(face_corr)
-M_skewness = np.nanmean(skewness)
-M_F_NABMA = np.nanmean(F_NABMA)
-M_F_rest = np.nanmean(F_rest)
-M_F_Run = np.nanmean(F_running)
-compile_data = [M_Run_LMI,mean_speed,M_Zscored_F_Run, M_Zscored_F_PM,
-                             M_Zscored_F_Rest, M_Zscored_F_AS,M_speed_corr,M_face_corr,M_skewness,
-                             Mean_Running_pupil,Mean_NABMA_pupil,Mean_rest_pupil,Mean_AS_pupil,
-                             M_F_NABMA,M_F_rest,M_F_Run,RUN_TIME,REST_TIME,only_paw_Time, AS_TIME,Run_percentage,mean_high_skew, mean_low_skew,percentage_valid_sp]
-compile_name = neuron_type + "_"+ mouse_line +"_"+mouse_Genotype +"_"+ sensor +"_"+ sex +"_"+ selected_screen_state
-compile_name2 = compile_name+".xlsx"
-column_name = compile_name +"_"+mouse_code +"_"+recording_date+"_"+session
-column = [column_name]
-path_compile = os.path.join(compile_directory, compile_name2)
-isexsist = os.path.exists(path_compile)
-if isexsist:
-    print("exist")
-    workbook = load_workbook(path_compile)
-    worksheet = workbook.active
-    new_row = column + compile_data
-    print(new_row)
-    first_column_values = [cell.value for cell in worksheet['A'] if cell.value is not None]
+if compile_directory != "No_compile":
+    M_Run_LMI = np.nanmean(LMI)
+    M_Zscored_F_Run = np.nanmean(Z_mean_F_Running)
+    M_Zscored_F_PM = np.nanmean(Z_mean_F_NABMA)
+    M_Zscored_F_Rest = np.nanmean(Z_mean_F_rest)
+    M_Zscored_F_AS = np.nanmean(Z_mean_F_AS)
+    M_speed_corr = np.nanmean(speed_corr)
+    M_face_corr = np.nanmean(face_corr)
+    M_skewness = np.nanmean(skewness)
+    M_F_NABMA = np.nanmean(F_NABMA)
+    M_F_rest = np.nanmean(F_rest)
+    M_F_Run = np.nanmean(F_running)
+    compile_data = [M_Run_LMI,mean_speed,M_Zscored_F_Run, M_Zscored_F_PM,
+                                 M_Zscored_F_Rest, M_Zscored_F_AS,M_speed_corr,M_face_corr,M_skewness,
+                                 Mean_Running_pupil,Mean_NABMA_pupil,Mean_rest_pupil,Mean_AS_pupil,
+                                 M_F_NABMA,M_F_rest,M_F_Run,RUN_TIME,REST_TIME,only_paw_Time, AS_TIME,Run_percentage,mean_high_skew, mean_low_skew,percentage_valid_sp]
+    compile_name = neuron_type + "_"+ mouse_line +"_"+mouse_Genotype +"_"+ sensor +"_"+ sex +"_"+ selected_screen_state
+    compile_name2 = compile_name+".xlsx"
+    column_name = compile_name +"_"+mouse_code +"_"+recording_date+"_"+session
+    column = [column_name]
+    path_compile = os.path.join(compile_directory, compile_name2)
+    isexsist = os.path.exists(path_compile)
+    if isexsist:
+        print("exist")
+        workbook = load_workbook(path_compile)
+        worksheet = workbook.active
+        new_row = column + compile_data
+        print(new_row)
+        first_column_values = [cell.value for cell in worksheet['A'] if cell.value is not None]
 
-    if column_name not in first_column_values:
-        # Append the new row data to the worksheet
-        worksheet.append(new_row)
-        workbook.save(path_compile)
-        print("New row added successfully.")
+        if column_name not in first_column_values:
+            # Append the new row data to the worksheet
+            worksheet.append(new_row)
+            workbook.save(path_compile)
+            print("New row added successfully.")
+        else:
+            print("Row with the same value in the first column already exists in the Excel file.")
+
     else:
-        print("Row with the same value in the first column already exists in the Excel file.")
 
+        data_compile = pd.DataFrame(compile_data,
+                                    index=['Run MI', 'Mean speed','Mean z run', 'Mean z paw movement', 'Mean z rest',
+                   'Mean z AS','Speed corr', 'Face corr', 'Skewness',
+                   'mean pupil Run', 'mean pupil paw movement','mean pupil rest',
+                   'mean pupil AS', 'Mean F paw movement', 'Mean F rest', 'Mean F Running','Run time',
+                                           'Rest time','PM time', 'AS Time', 'Run percentage', 'mean_high_skew', 'mean_low_skew','valid_sp'],columns=column).T
+        functions.save_exel(compile_name2, compile_directory, data_compile)
+        print("End of program")
 else:
+    print("data was not compile\nEnd of program")
 
-    data_compile = pd.DataFrame(compile_data,
-                                index=['Run MI', 'Mean speed','Mean z run', 'Mean z paw movement', 'Mean z rest',
-               'Mean z AS','Speed corr', 'Face corr', 'Skewness',
-               'mean pupil Run', 'mean pupil paw movement','mean pupil rest',
-               'mean pupil AS', 'Mean F paw movement', 'Mean F rest', 'Mean F Running','Run time',
-                                       'Rest time','PM time', 'AS Time', 'Run percentage', 'mean_high_skew', 'mean_low_skew','valid_sp'],columns=column).T
-    functions.save_exel(compile_name2, compile_directory, data_compile)
-    print("End of program")

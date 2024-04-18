@@ -8,10 +8,10 @@ from scipy.ndimage import shift
 import easygui
 import functions
 
-def DetectRedCellMask(bath_path, min_area = 35 , max_area= 150):
+def DetectRedCellMask(bath_path,save_red_results,  min_area = 35 , max_area= 150):
     image =  os.path.join(bath_path, "red.tif")
-    detected_mask_path = os.path.join(bath_path, "red_masked.jpg")
-    gray_image_path = os.path.join(bath_path, "grey_image.jpg")
+    detected_mask_path = os.path.join(save_red_results, "red_masked.jpg")
+    gray_image_path = os.path.join(save_red_results, "grey_image.jpg")
     # Load image
     img = cv.imread(image, cv.IMREAD_COLOR)
     output = img.copy()
@@ -43,14 +43,14 @@ def DetectRedCellMask(bath_path, min_area = 35 , max_area= 150):
     return blank3
 
 
-def loadred():
-    Base_path = easygui.diropenbox(title='select folder for red image')
-    ops = np.load((os.path.join(Base_path, "ops.npy")), allow_pickle=True).item()
+def loadred(Base_path):
+    suite2p_path = os.path.join(Base_path, "suite2p", "plane0")
+    ops = np.load((os.path.join(suite2p_path, "ops.npy")), allow_pickle=True).item()
     Mean_image = ((ops['meanImg']))
-    cell = np.load((os.path.join(Base_path, "iscell.npy")), allow_pickle=True)
-    stat = np.load((os.path.join(Base_path, "stat.npy")), allow_pickle=True)
+    cell = np.load((os.path.join(suite2p_path, "iscell.npy")), allow_pickle=True)
+    stat = np.load((os.path.join(suite2p_path, "stat.npy")), allow_pickle=True)
     single_red = cv.imread((os.path.join(Base_path, 'red.tif')))
-    return Base_path, ops, Mean_image, cell, stat, single_red
+    return suite2p_path, ops, Mean_image, cell, stat, single_red
 
 def totalMask(cells, stat, ops):
     cell_info,_ = functions.detect_cell(cells, stat)
@@ -68,7 +68,7 @@ def single_mask(ops, cell_info):
     return separete_masks
 
 
-def select_mask(Base_path, thresh2, separete_masks, cell_true = 2):
+def select_mask(save_red_results, thresh2, separete_masks, cell_true = 2):
     KeepMask = []
     comen_cell = []
     only_green_mask = []
@@ -84,8 +84,8 @@ def select_mask(Base_path, thresh2, separete_masks, cell_true = 2):
             only_green_cell.append(i)
             only_green_mask.append(separete_masks[i])
     print(len(KeepMask), 'common cell detected')
-    save_direction1 = os.path.join(Base_path, 'red_green_cells.npy')
-    save_direction2 = os.path.join(Base_path, 'only_green.npy')
+    save_direction1 = os.path.join(save_red_results, 'red_green_cells.npy')
+    save_direction2 = os.path.join(save_red_results, 'only_green.npy')
     np.save(save_direction1, comen_cell, allow_pickle=True)
     np.save(save_direction2, only_green_cell, allow_pickle=True)
     return only_green_mask, only_green_cell, comen_cell, KeepMask, blank2
