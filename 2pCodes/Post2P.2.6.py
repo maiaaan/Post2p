@@ -355,6 +355,12 @@ if LAUNCH_PROCESSING :
         categories = ['Rest','NABMA', 'Aroused_Stationary', 'Running']
         values = [Mean_rest_pupil, Mean_NABMA_pupil,Mean_AS_pupil, Mean_Running_pupil]
         functions.creat_H5_dataset(Sub_processd_PState, values, categories)
+        
+        pupil_run = motion_state.get_interval_array(pupil, states_window['run'])
+        pupil_AS = motion_state.get_interval_array(pupil, states_window['AS'])
+        pupil_NABMA = motion_state.get_interval_array(pupil, states_window['NABMA'])
+        pupil_rest = motion_state.get_interval_array(pupil, states_window['rest'])
+
         M_active_pupil1 = leN * [Mean_Running_pupil]
         M_NABMA_pupil1 = leN * [Mean_NABMA_pupil]
         M_rest_pupil1 = leN * [Mean_rest_pupil]
@@ -363,6 +369,9 @@ if LAUNCH_PROCESSING :
         figure.pupil_state(categories, values, save_direction_figure, 'mean pupil Zscored', 'pupil states',SAVE_SVG)
         figure.scatter_plot(num, pupil_corr, out_neurons_pupil, save_direction_figure,
             'pupil & F Correlation','Neuron','correlation', 'pass pupil P test', 'fail pupil P test',SAVE_SVG)
+        figure.box_plot(pupil_run, pupil_AS, pupil_NABMA, pupil_rest, 
+                        'Run', 'AS', 'NABMA', "Rest", 
+                        "pupil_boxplot_per_state", 'pupil z-score', '', save_direction_figure, SAVE_SVG)
     else:
         Mean_rest_pupil= Mean_NABMA_pupil = Mean_AS_pupil = Mean_Running_pupil = None
         M_active_pupil1 = M_NABMA_pupil1 = M_rest_pupil1 = Max_AS_pupil1 = np.full(leN, np.nan)
@@ -390,6 +399,11 @@ if LAUNCH_PROCESSING :
         F_AS = motion_state.mean_max_interval(nvar['dF'], states_window['AS'], method='mean')
         Z_mean_F_AS = motion_state.mean_max_interval(nvar['dF z-score'], states_window['AS'], method='mean')
         mean_dF.create_dataset('AS', data=F_AS)
+        facemotion_run = motion_state.get_interval_array(filtered_motion, states_window['run'])
+        facemotion_AS = motion_state.get_interval_array(filtered_motion, states_window['AS'])
+        facemotion_NABMA = motion_state.get_interval_array(filtered_motion, states_window['NABMA'])
+        facemotion_rest = motion_state.get_interval_array(filtered_motion, states_window['rest'])
+
         Whisking_TIME = AS_TIME + RUN_TIME + NABMA_Time
         Whisking_percentage = (Whisking_TIME / real_time[-1])*100
         #--------------------------------------------------------------------------
@@ -412,6 +426,9 @@ if LAUNCH_PROCESSING :
             figure.scatter_plot(num_AS, AS_MI, out_neurons_speed, save_direction_figure, 'AS MI',
                     'Neuron', 'Aroused_stationary MI', 'pass speed P test', 'fail speed P test',SAVE_SVG)
         #-----------------------------------------plot face------------------------------------------
+        figure.box_plot(facemotion_run, facemotion_AS, facemotion_NABMA, facemotion_rest, 
+                        'Run', 'AS', 'NABMA', "Rest", 
+                        "facemotion_boxplot_per_state", 'filtered facemotion', '', save_direction_figure, SAVE_SVG)
         figure.fit_plot(speed_corr, face_corr, save_direction_figure, 'Speed & facemotion','facemotion correlation','speed correlation')
         figure.scatter_plot(num, face_corr, out_neurons_face, save_direction_figure,
                         'Facemotion & F Correlation', 'Neuron', 'correlation', 'pass face P test', 'fail face P test',SAVE_SVG)

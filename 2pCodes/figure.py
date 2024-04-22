@@ -76,8 +76,8 @@ def general_figure(TIme, normal_pupil,speed, normal_motion,dF, save_direction_fi
     plt.yticks(fontsize=20)
     functions.save_fig(label, save_direction_figure, fig)
 
-def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_label, y_labe, Title, save_direction,svg):
-    fig, ax = plt.subplots(figsize=(4, 5))
+def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_label, y_label, Title, save_direction, svg):
+    fig, ax = plt.subplots(figsize=(7, 10))
     boxplot1 = ax.boxplot(data1, positions=[1], widths=0.6, patch_artist=True)
     boxplot2 = ax.boxplot(data2, positions=[2], widths=0.6, patch_artist=True)
     boxplot3 = ax.boxplot(data3, positions=[3], widths=0.6, patch_artist=True)
@@ -93,13 +93,14 @@ def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_lab
     # Add labels and title
     ax.set_xticks([1, 2, 3, 4])
     ax.set_xticklabels([label1,label2,label3,label4])
-    ax.set_ylabel(y_labe)
+    ax.set_ylabel(y_label)
     ax.set_title(Title)
     if svg == True:
         svg_name = "activity_state.svg"
         save_direction_svg = os.path.join(save_direction, svg_name)
         fig.savefig(save_direction_svg)
     functions.save_fig(fig_label,save_direction,fig)
+
 def simple_plot(time, y,save_direction, label ):
     fig = plt.figure(figsize=(7, 2))
     plt.plot(time, y)

@@ -178,6 +178,14 @@ def mean_interval (X, interval, method):
     Max_interval_pupil= np.mean(pupil_interval)
     return Max_interval_pupil
 
+def get_interval_array(X, interval):
+    array = np.array([])
+    for window in interval:
+        start = window[0]
+        end = window[-1]
+        array = np.append(array, X[start: end])
+    return array
+
 def stage_plot(motion, speed, pupil, F, real_time, Real_Time_states, states_window, filter_kernel, save_dir, svg, threshold=None):
     speed = gaussian_filter1d(speed, filter_kernel['speed'])
     motion = gaussian_filter1d(motion, filter_kernel['motion'])
