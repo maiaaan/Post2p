@@ -275,3 +275,33 @@ def simple_plot_SVG(time, trace, figure_path, title):
     fig_path2 = os.path.join(figure_path,title)
     fig.savefig(fig_path2, format = 'svg')
     plt.close(fig)
+
+def colormap_perm_test(time, dF, var, valid_neurons, label:str=None, save_path=None):
+    dF = functions.detect_valid_neurons(valid_neurons, dF)
+    var_corr = [scipy.stats.pearsonr(var, x)[0] for x in dF]
+    dF_corr_sorted = [x for _, x in sorted(zip(var_corr, dF))]
+    norm_dF_corr_sorted = functions.Normal_df(dF_corr_sorted)
+    mean_dF = np.mean(dF, 0)
+    
+    fig = plt.figure(figsize=(13, 5))
+    gs = fig.add_gridspec(2, 2, height_ratios=[2,3], width_ratios=[22,1], hspace=0.3, wspace=0.05)
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[1, 0])
+    ax1b = fig.add_subplot(gs[1, 1])
+    
+    ax0.plot(time, gaussian_filter1d(mean_dF, 10), label=r'$\Delta$F/F')
+    ax0.set_xticks([])
+    ax0.margins(x=0)
+    ax0.set_facecolor("white")
+    ax0.set_title(r'Normalized $\Delta$F/F mean on neurons which passed the ' + label + ' permutation test')
+
+    c = ax1.pcolormesh(norm_dF_corr_sorted, cmap='viridis')
+    ax1.set_ylabel('Sorted neurons')
+    ax1.set_xlabel('Frame')
+    ax1.margins(x=0)
+    ax1.set_facecolor("white")
+    ax1.set_title('Normalized neuronal activity (sorted by ' + label + ' correlation)')
+    fig.colorbar(c, cax=ax1b)
+
+    if save_path != None : 
+        functions.save_fig(label +"_permT_neural_activity.png", save_path, fig)

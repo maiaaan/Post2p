@@ -372,6 +372,7 @@ if LAUNCH_PROCESSING :
         figure.box_plot(pupil_run, pupil_AS, pupil_NABMA, pupil_rest, 
                         'Run', 'AS', 'NABMA', "Rest", 
                         "pupil_boxplot_per_state", 'pupil z-score', '', save_direction_figure, SAVE_SVG)
+        figure.colormap_perm_test(real_time, nvar['dF'], pupil, valid_neurons_pupil, 'pupil', save_direction_figure)
     else:
         Mean_rest_pupil= Mean_NABMA_pupil = Mean_AS_pupil = Mean_Running_pupil = None
         M_active_pupil1 = M_NABMA_pupil1 = M_rest_pupil1 = Max_AS_pupil1 = np.full(leN, np.nan)
@@ -432,6 +433,7 @@ if LAUNCH_PROCESSING :
         figure.fit_plot(speed_corr, face_corr, save_direction_figure, 'Speed & facemotion','facemotion correlation','speed correlation')
         figure.scatter_plot(num, face_corr, out_neurons_face, save_direction_figure,
                         'Facemotion & F Correlation', 'Neuron', 'correlation', 'pass face P test', 'fail face P test',SAVE_SVG)
+        figure.colormap_perm_test(real_time, nvar['dF'], motion, valid_neurons_face, 'facemotion', save_direction_figure)
     else:
         Z_mean_F_AS = np.full(leN, np.nan)
         face_corr = np.full(leN, np.nan)
@@ -459,7 +461,8 @@ if LAUNCH_PROCESSING :
     figure.scatter_plot(num_LMI, nvar['LMI'], out_neurons_speed, save_direction_figure,
                         'Running LMI', 'Neuron', 'LMI', 'pass speed P test', 'fail speed P test',SAVE_SVG)
 
-     #---------------------------------------------VARIABLES EXCEL SHEET---------------------------------------------------
+    figure.colormap_perm_test(real_time, nvar['dF'], speed, valid_neurons_speed, 'speed', save_direction_figure)
+    #---------------------------------------------VARIABLES EXCEL SHEET---------------------------------------------------
     sp = np.copy(speed)
     sp[sp == 0] = 'nan'
     mean_speed = np.nanmean(sp)
