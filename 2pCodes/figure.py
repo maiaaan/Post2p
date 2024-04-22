@@ -5,6 +5,7 @@ import os
 from scipy import signal
 import pandas as pd
 import plotly.express as px
+import seaborn as sns
 
 def Time_pie(Aroused_stat_T, Running_T, Rest_T, NABMA_T, total_duration, save_direction, svg):
     not_used = total_duration - (Aroused_stat_T + Running_T + Rest_T + NABMA_T)
@@ -25,55 +26,73 @@ def Time_pie(Aroused_stat_T, Running_T, Rest_T, NABMA_T, total_duration, save_di
         fig.savefig(save_direction_svg)
     functions.save_fig("Motion_time.png",save_direction,fig)
 
-def general_figure(TIme, normal_pupil,speed, normal_motion,dF, save_direction_figure,label):
+def general_figure(TIme, normal_pupil, speed, normal_motion, dF, save_direction_figure, label):
     fig = plt.figure(figsize=(36, 20))
     y2 = dF[-1]
+    mean_dF = np.mean(dF, 0)
     gs = fig.add_gridspec(26, 45)
+
+    # Speed
+    ax0 = fig.add_subplot(gs[0:2, :43])
+    ax0.set_title('Running Speed', fontsize=25, y=1.)
+    ax0.plot(TIme, speed, linewidth=4)
+    ax0.set_xticks([])
+    ax0.margins(x=0)
+    ax0.set_ylabel('cm/s', fontsize=20)
+    ax0.set_facecolor("white")
+    plt.yticks(fontsize=20)
+
+    # Pupil
     ax00 = fig.add_subplot(gs[3:5, :43])
-    ax00.set_title('Pupil', fontsize=25, y=1.)
+    ax00.set_title('Pupil z-score', fontsize=25, y=1.)
     ax00.plot(TIme, normal_pupil, linewidth=4)
     ax00.set_xticks([])
-    ax00.set_yticks([])
     ax00.margins(x=0)
     ax00.set_facecolor("white")
     plt.yticks(fontsize=20)
-    ax0 = fig.add_subplot(gs[0:2, :43])
-    ax0.set_title('Running Speed', fontsize=25, y=1)
-    ax0.plot(TIme, speed, linewidth=4)
-    ax0.set_xticks([])
-    plt.yticks(fontsize=20)
-    ax0.margins(x=0)
-    ax0.set_ylabel('cm/S', fontsize=20)
-    ax0.set_facecolor("white")
-    # Plot1
-    ax1 = fig.add_subplot(gs[10:22, :43])
-    ax1.set_title('color code', fontsize=25, y=1.0, horizontalalignment='center')
-    ax1.pcolormesh(dF)
-    ax1.set_xticks([])
-    ax1.margins(x=0)
-    ax1.set_ylabel('Neuron', fontsize=25)
-    plt.yticks(fontsize=20)
-    # Plot2
-    m = ax1.pcolormesh(dF)
-    ax2 = fig.add_subplot(gs[10:22, 44:45])
-    fig.colorbar(m, cax=ax2)
-    plt.yticks(fontsize=20)
-    # Plot3
-    ax3 = fig.add_subplot(gs[7:9, :43])
-    ax3.set_title('face motion', fontsize=25, y=1.0, horizontalalignment='center')
-    ax3.plot(TIme, normal_motion)
+
+    # Facemotion
+    ax3 = fig.add_subplot(gs[6:8, :43])
+    ax3.set_title('Face Motion', fontsize=25, y=1.0, horizontalalignment='center')
+    ax3.plot(TIme, normal_motion, linewidth=4)
+    ax3.set_xticks([])
     ax3.margins(x=0)
     ax3.set_facecolor("white")
-    ax3.set_yticks([])
-    ax3.set_xticks([])
     plt.yticks(fontsize=20)
-    # Plot4
-    ax4 = fig.add_subplot(gs[23:25, :43])
-    ax4.set_title('dF/F', fontsize=25, y=1.0, horizontalalignment='center')
+
+    # mean dF/F
+    ax2 = fig.add_subplot(gs[9:11, :43])
+    ax2.set_title('Normalized dF/F mean', fontsize=25, y=1.0, horizontalalignment='center')
+    ax2.plot(TIme, mean_dF, linewidth=4)
+    ax2.set_xticks([])
+    ax2.margins(x=0)
+    ax2.set_facecolor("white")
+    plt.yticks(fontsize=20)
+
+    # Neuronal activity map
+    ax1 = fig.add_subplot(gs[12:23, :43])
+    ax1.set_title('Normalized neuronal activity (sorted by speed correlation)', fontsize=25, y=1.0, horizontalalignment='center')
+    ax1.pcolormesh(dF, cmap='viridis')
+    ax1.set_xticks([])
+    ax1.margins(x=0)
+    ax1.set_ylabel('Neuron', fontsize=20)
+    plt.yticks(fontsize=20)
+
+    m = ax1.pcolormesh(dF, cmap='viridis')
+    ax2 = fig.add_subplot(gs[12:23, 44:45])
+    fig.colorbar(m, cax=ax2)
+    plt.yticks(fontsize=20)
+
+    # dF/F
+    ax4 = fig.add_subplot(gs[24:26, :43])
+    ax4.set_title("Most speed correlated neuron's normalized dF/F", fontsize=25, y=1.0, horizontalalignment='center')
     ax4.plot(TIme, y2)
+    ax4.set_xlabel('Time (s)', fontsize=20)
     ax4.margins(x=0)
     ax4.set_facecolor("white")
+    plt.xticks(fontsize=20)
     plt.yticks(fontsize=20)
+
     functions.save_fig(label, save_direction_figure, fig)
 
 def box_plot(data1, data2, data3, data4, label1, label2, label3, label4, fig_label, y_label, Title, save_direction, svg):
