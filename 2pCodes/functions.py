@@ -72,6 +72,7 @@ def interpolation1(sampel_data_for_interpolation, data_for_interpolating):
     return data_for_interpolating
 
 def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, pearson_corr):
+    sns.set_theme()
     length = len(X)
     step = t_imaging[-1] / length
     freq = length / t_imaging[-1]
@@ -157,7 +158,7 @@ def lag(t_imaging, valid_neurons, save_direction03, dF, X, label, pearson_corr):
     median = np.median(all_lag)
     ax.axvline(median, color="teal", linestyle='dashed', linewidth=1.5, label='median')
     ax.set_xlabel('Lag (in s)')
-    ax.set_ylabel('Count in %')
+    ax.set_ylabel('Count (in %)')
     ax.legend()
 
     ax2.plot(time_corr[start:end], positive_correlation_mean[start:end], alpha=0.7, label=r'correlation of mean $\Delta$F/F')
@@ -209,10 +210,10 @@ def permutation(dF, speed, label, real_time, save_direction202, samples = 1000):
         ax.clear()
         ax2.clear()
         fig.suptitle(f'ROI {s}')
-        ax.hist(permuted_corrs, weights=weights * 100, bins=30, alpha=0.5, label='Permutations')
-        ax.axvline(real_corr, color='red', linestyle='dashed', linewidth=2, label='Observed')
+        ax.hist(permuted_corrs, weights=weights * 100, bins=30, alpha=0.5)
+        ax.axvline(real_corr, color='red', linestyle='dashed', linewidth=2, label='Observed correlation')
         ax.set_xlabel('Correlation Coefficient')
-        ax.set_ylabel('Percentage')
+        ax.set_ylabel('Count (in %)')
         ax.set_title(f'Permutation Test ({label})')
         ax.legend(loc='upper right', fontsize='small')
         ax.annotate(f'p-value = {p_value:.3f}', xy=(0.02, 0.98), xycoords='axes fraction', fontsize=9,
